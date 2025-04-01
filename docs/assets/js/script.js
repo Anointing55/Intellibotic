@@ -1,1 +1,4 @@
-console.log("Welcome to Pate AI!");
+// Simple JavaScript for future interactivity
+document.addEventListener("DOMContentLoaded", function () {
+    console.log("IntelliBotic website loaded successfully!");
+});
