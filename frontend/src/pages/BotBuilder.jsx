@@ -1,4 +1,3 @@
-// frontend/src/pages/BotBuilder.jsx
 import React, { useState, useEffect, useCallback } from 'react';
 import ReactFlow, {
   Controls,
@@ -7,12 +6,26 @@ import ReactFlow, {
   ReactFlowProvider,
   useNodesState,
   useEdgesState,
+  MiniMap,
   useReactFlow,
   Panel
 } from 'reactflow';
-import 'reactflow/dist/style.css';
+
+import 'reactflow/dist/style.css';  // ✅ Only this CSS is needed
+
 import { motion } from 'framer-motion';
-import { FiSave, FiX, FiMessageSquare, FiHelpCircle, FiCode, FiZap, FiSettings, FiChevronLeft, FiPlus } from 'react-icons/fi';
+import {
+  FiSave,
+  FiX,
+  FiMessageSquare,
+  FiHelpCircle,
+  FiCode,
+  FiZap,
+  FiSettings,
+  FiChevronLeft,
+  FiPlus
+} from 'react-icons/fi';
+
 import { useParams, useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 

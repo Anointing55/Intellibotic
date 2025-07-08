@@ -2,7 +2,17 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Editor from '@monaco-editor/react';
-import { FiSave, FiCode, FiCopy, FiTrash2, FiBox, FiPlus, FiX, FiDownload, FiUpload } from 'react-icons/fi';
+import {
+  FiSave,
+  FiCode,
+  FiCopy,
+  FiTrash2,
+  FiBox,
+  FiPlus,
+  FiX,
+  FiDownload,
+  FiUpload
+} from 'react-icons/fi';
 
 const AddFeature = () => {
   const [featureName, setFeatureName] = useState('');
