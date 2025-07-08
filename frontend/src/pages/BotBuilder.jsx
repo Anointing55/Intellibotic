@@ -13,8 +13,9 @@ import ReactFlow, {
   MiniMap,
   Panel
 } from '@reactflow/core';
-import 'reactflow/dist/style.css';
-import { FiSave, FiMessageSquare, FiCode, FiGitBranch, FiChevronRight, FiX, FiPlus, FiTrash2, FiSettings } from 'react-icons/fi';
+import '@reactflow/core/dist/style.css';
+import '@reactflow/node-resizer/dist/style.css';
+import { FiSave, FiMessageSquare, FiCode, FiGitBranch, FiChevronRight, FiX, FiPlus, FiTrash2, FiSettings, FiPlay } from 'react-icons/fi';
 
 // Custom Node Types
 const MessageNode = ({ data }) => (
@@ -133,7 +134,10 @@ const BotBuilder = () => {
       id: `node-${Date.now()}`,
       type,
       position,
-      data: { label: `${type.charAt(0).toUpperCase() + type.slice(1)} Node` }
+      data: { 
+        label: `${type.charAt(0).toUpperCase() + type.slice(1)} Node`,
+        content: ''
+      }
     };
     
     setNodes((nds) => nds.concat(newNode));
@@ -392,7 +396,7 @@ const BotBuilder = () => {
                   onClick={() => navigate(`/chat/${botId}`)}
                   className="flex items-center bg-secondary hover:bg-secondary/90 text-white px-4 py-2 rounded-lg"
                 >
-                  <FiMessageSquare className="mr-2" />
+                  <FiPlay className="mr-2" />
                   Test Chat
                 </motion.button>
                 
