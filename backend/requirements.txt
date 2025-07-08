@@ -1,0 +1,6 @@
+fastapi==0.75.2
+uvicorn==0.17.6
+python-multipart==0.0.5
+python-jose[cryptography]==3.3.0
+sqlalchemy==1.4.36
+databases[postgresql]==0.5.5
