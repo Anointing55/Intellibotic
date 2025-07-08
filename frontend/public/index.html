@@ -1,0 +1,344 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Intellibotic - Professional chatbot builder platform with drag-and-drop interface and AI capabilities">
+    <meta name="keywords" content="chatbot, AI, bot builder, automation, Intellibotic">
+    <meta name="author" content="Intellibotic Team">
+    
+    <title>Intellibotic | Professional Chatbot Builder</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" href="%PUBLIC_URL%/favicon.ico">
+    
+    <!-- Theme Color -->
+    <meta name="theme-color" content="#6366f1">
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="https://intellibotic.app/">
+    <meta property="og:title" content="Intellibotic | Professional Chatbot Builder">
+    <meta property="og:description" content="Build advanced AI chatbots with our drag-and-drop interface. No coding required.">
+    <meta property="og:image" content="%PUBLIC_URL%/social-preview.jpg">
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image">
+    <meta property="twitter:url" content="https://intellibotic.app/">
+    <meta property="twitter:title" content="Intellibotic | Professional Chatbot Builder">
+    <meta property="twitter:description" content="Build advanced AI chatbots with our drag-and-drop interface. No coding required.">
+    <meta property="twitter:image" content="%PUBLIC_URL%/social-preview.jpg">
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Splash Screen Styles -->
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #1a1b2f, #2d3250);
+            color: #ffffff;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-x: hidden;
+        }
+        
+        .splash-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+            text-align: center;
+            position: relative;
+        }
+        
+        /* Animated Background */
+        .animated-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            overflow: hidden;
+            z-index: -1;
+        }
+        
+        .bg-circle {
+            position: absolute;
+            border-radius: 50%;
+            opacity: 0.1;
+            filter: blur(60px);
+            animation: float 15s infinite ease-in-out;
+        }
+        
+        .circle-1 {
+            width: 500px;
+            height: 500px;
+            background: #6366f1;
+            top: -200px;
+            left: -200px;
+            animation-delay: 0s;
+        }
+        
+        .circle-2 {
+            width: 400px;
+            height: 400px;
+            background: #8b5cf6;
+            bottom: -150px;
+            right: -100px;
+            animation-delay: -5s;
+        }
+        
+        .circle-3 {
+            width: 300px;
+            height: 300px;
+            background: #3b82f6;
+            top: 50%;
+            left: 30%;
+            animation-delay: -10s;
+        }
+        
+        @keyframes float {
+            0%, 100% {
+                transform: translate(0, 0);
+            }
+            25% {
+                transform: translate(20px, 20px);
+            }
+            50% {
+                transform: translate(-20px, 20px);
+            }
+            75% {
+                transform: translate(-20px, -20px);
+            }
+        }
+        
+        /* Logo & Branding */
+        .logo {
+            display: flex;
+            align-items: center;
+            margin-bottom: 2.5rem;
+            animation: fadeIn 1s ease-out;
+        }
+        
+        .logo-icon {
+            width: 60px;
+            height: 60px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 24px;
+            margin-right: 15px;
+            box-shadow: 0 10px 25px rgba(99, 102, 241, 0.3);
+        }
+        
+        .logo-text {
+            font-size: 36px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #ffffff, #c7d2fe);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: -0.5px;
+        }
+        
+        /* Main Content */
+        .hero {
+            max-width: 800px;
+            margin: 0 auto 3rem;
+            animation: slideUp 1s ease-out;
+        }
+        
+        .hero h1 {
+            font-size: 3.5rem;
+            font-weight: 800;
+            line-height: 1.1;
+            margin-bottom: 1.5rem;
+            background: linear-gradient(135deg, #ffffff, #a5b4fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        
+        .hero p {
+            font-size: 1.25rem;
+            line-height: 1.6;
+            color: #c7d2fe;
+            margin-bottom: 2rem;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        /* Loading Animation */
+        .loader {
+            display: flex;
+            justify-content: center;
+            margin: 2rem 0;
+        }
+        
+        .loader-dot {
+            width: 12px;
+            height: 12px;
+            background-color: #818cf8;
+            border-radius: 50%;
+            margin: 0 6px;
+            animation: pulse 1.5s infinite ease-in-out;
+        }
+        
+        .loader-dot:nth-child(2) {
+            animation-delay: 0.2s;
+        }
+        
+        .loader-dot:nth-child(3) {
+            animation-delay: 0.4s;
+        }
+        
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.2);
+                opacity: 0.7;
+            }
+        }
+        
+        /* Status Message */
+        .status-message {
+            color: #a5b4fc;
+            font-size: 1rem;
+            margin-top: 1rem;
+            animation: fadeIn 1.5s ease-out;
+        }
+        
+        /* Footer */
+        .footer {
+            padding: 2rem;
+            text-align: center;
+            color: #818cf8;
+            font-size: 0.9rem;
+        }
+        
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        @keyframes slideUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .hero h1 {
+                font-size: 2.5rem;
+            }
+            
+            .hero p {
+                font-size: 1.1rem;
+            }
+            
+            .logo-text {
+                font-size: 28px;
+            }
+        }
+        
+        @media (max-width: 480px) {
+            .logo {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .logo-icon {
+                margin-right: 0;
+                margin-bottom: 15px;
+            }
+            
+            .hero h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Splash Screen -->
+    <div class="splash-container">
+        <div class="animated-bg">
+            <div class="bg-circle circle-1"></div>
+            <div class="bg-circle circle-2"></div>
+            <div class="bg-circle circle-3"></div>
+        </div>
+        
+        <div class="logo">
+            <div class="logo-icon">IB</div>
+            <div class="logo-text">Intellibotic</div>
+        </div>
+        
+        <div class="hero">
+            <h1>Build Intelligent Chatbots Without Code</h1>
+            <p>Create professional-grade conversational AI with our drag-and-drop builder. Perfect for customer support, lead generation, and automation.</p>
+        </div>
+        
+        <div class="loader">
+            <div class="loader-dot"></div>
+            <div class="loader-dot"></div>
+            <div class="loader-dot"></div>
+        </div>
+        
+        <div class="status-message">Loading application resources...</div>
+    </div>
+    
+    <div class="footer">
+        © 2025 Intellibotic. All rights reserved.
+    </div>
+    
+    <!-- Root element for React app -->
+    <div id="root"></div>
+    
+    <!-- Loading Script -->
+    <script>
+        // Display loading progress
+        const statusMessage = document.querySelector('.status-message');
+        const messages = [
+            "Initializing application...",
+            "Loading AI modules...",
+            "Preparing visual builder...",
+            "Almost ready...",
+            "Launching Intellibotic..."
+        ];
+        
+        let counter = 0;
+        const interval = setInterval(() => {
+            statusMessage.textContent = messages[counter];
+            counter = (counter + 1) % messages.length;
+        }, 2500);
+        
+        // Remove splash screen when app is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            // This event is handled by React's mounting process
+        });
+    </script>
+</body>
+</html>
