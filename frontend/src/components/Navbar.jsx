@@ -1,4 +1,4 @@
-import React from 'react';
+import ReactFlow from '@reactflow/core';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { FiSettings, FiLogOut, FiPlus, FiUser } from 'react-icons/fi';
