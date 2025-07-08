@@ -1,418 +1,505 @@
 // frontend/src/pages/Settings.jsx
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { FiSave, FiTrash2, FiUpload, FiDownload, FiMessageSquare, FiUser, FiBell, FiLock, FiGlobe } from 'react-icons/fi';
+import axios from 'axios';
+import { FiSave, FiArrowLeft, FiImage, FiTrash2, FiCheck, FiX } from 'react-icons/fi';
 
 const Settings = () => {
-  const [botName, setBotName] = useState('Customer Support Bot');
-  const [botDescription, setBotDescription] = useState('Handles common customer inquiries');
-  const [botAvatar, setBotAvatar] = useState('IB');
-  const [primaryColor, setPrimaryColor] = useState('#6366f1');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [botId, setBotId] = useState(null);
+  const [bot, setBot] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [activeTab, setActiveTab] = useState('general');
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  
+  // Form state
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    avatar: '',
+    greetingMessage: '',
+    themeColor: '#6366f1',
+  });
 
-  const handleSave = () => {
-    setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-      alert('Settings saved successfully!');
-    }, 1500);
+  // Extract botId from query params
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const id = params.get('botId');
+    if (id) {
+      setBotId(id);
+    }
+  }, [location]);
+
+  // Fetch bot data
+  useEffect(() => {
+    if (!botId) return;
+    
+    const fetchBot = async () => {
+      try {
+        setIsLoading(true);
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`/api/bots/${botId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        setBot(response.data);
+        setFormData({
+          name: response.data.name,
+          description: response.data.description || '',
+          avatar: response.data.config?.avatar || '',
+          greetingMessage: response.data.config?.greetingMessage || 'Hello! How can I help you today?',
+          themeColor: response.data.config?.themeColor || '#6366f1',
+        });
+      } catch (error) {
+        console.error('Error fetching bot:', error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    fetchBot();
+  }, [botId]);
+
+  // Handle form changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
   };
 
-  const handleDelete = () => {
-    if (window.confirm('Are you sure you want to delete this bot? This action cannot be undone.')) {
-      alert('Bot deleted successfully');
-      window.location.href = '/dashboard';
+  // Handle color change
+  const handleColorChange = (color) => {
+    setFormData(prev => ({ ...prev, themeColor: color }));
+  };
+
+  // Save settings
+  const handleSave = async () => {
+    if (!botId) return;
+    
+    setIsSaving(true);
+    try {
+      const token = localStorage.getItem('token');
+      await axios.put(`/api/bots/${botId}`, {
+        name: formData.name,
+        description: formData.description,
+        config: {
+          ...(bot?.config || {}),
+          avatar: formData.avatar,
+          greetingMessage: formData.greetingMessage,
+          themeColor: formData.themeColor
+        }
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      // Show success feedback
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (error) {
+      console.error('Error saving bot settings:', error);
+    } finally {
+      setIsSaving(false);
     }
   };
 
+  // Delete bot
+  const handleDelete = async () => {
+    if (!botId) return;
+    
+    try {
+      const token = localStorage.getItem('token');
+      await axios.delete(`/api/bots/${botId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      
+      navigate('/dashboard');
+    } catch (error) {
+      console.error('Error deleting bot:', error);
+    }
+  };
+
+  // Color options
   const colorOptions = [
-    { name: 'Indigo', value: '#6366f1' },
-    { name: 'Blue', value: '#3b82f6' },
-    { name: 'Green', value: '#10b981' },
+    { name: 'Primary', value: '#6366f1' },
     { name: 'Purple', value: '#8b5cf6' },
-    { name: 'Red', value: '#ef4444' },
+    { name: 'Pink', value: '#ec4899' },
+    { name: 'Teal', value: '#14b8a6' },
     { name: 'Amber', value: '#f59e0b' },
+    { name: 'Rose', value: '#f43f5e' },
   ];
 
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          className="h-16 w-16 border-4 border-primary border-t-transparent rounded-full"
+        />
+      </div>
+    );
+  }
+
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="min-h-screen bg-gradient-to-br from-gray-50 to-indigo-50"
-    >
+    <div className="container mx-auto px-4 py-8">
       {/* Header */}
-      <header className="bg-white shadow-sm">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
-            <div className="flex items-center">
-              <div className="bg-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center">
-                <span className="text-white font-bold text-xl">IB</span>
-              </div>
-              <h1 className="ml-3 text-2xl font-bold text-gray-900">Intellibotic</h1>
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-6">
+          <motion.button
+            whileHover={{ x: -5 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => navigate(-1)}
+            className="flex items-center text-gray-600 hover:text-gray-800"
+          >
+            <FiArrowLeft className="mr-2" />
+            Back
+          </motion.button>
+          
+          <h1 className="text-3xl font-bold text-gray-800 text-center">
+            Bot Settings
+          </h1>
+          
+          <div className="w-24"></div> {/* Spacer for alignment */}
+        </div>
+        
+        <div className="bg-white rounded-xl shadow-md p-6 flex items-start">
+          {formData.avatar ? (
+            <img 
+              src={formData.avatar} 
+              alt={formData.name} 
+              className="w-20 h-20 rounded-xl object-cover mr-6 border-2 border-gray-200"
+            />
+          ) : (
+            <div className="bg-gradient-to-r from-primary to-secondary w-20 h-20 rounded-xl flex items-center justify-center text-white text-2xl font-bold mr-6">
+              {formData.name.charAt(0)}
             </div>
-            
-            <div className="flex items-center space-x-4">
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="bg-indigo-600 text-white rounded-lg px-4 py-2 hover:bg-indigo-700 flex items-center"
-                onClick={handleSave}
-                disabled={isSaving}
-              >
-                <FiSave className={`mr-2 ${isSaving ? 'animate-spin' : ''}`} />
-                {isSaving ? 'Saving...' : 'Save Changes'}
-              </motion.button>
+          )}
+          
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800">{formData.name}</h2>
+            <p className="text-gray-600">
+              {formData.description || "No description provided"}
+            </p>
+            <div className="mt-2 text-sm text-gray-500">
+              ID: {botId} • Created: {new Date(bot.created_at).toLocaleDateString()}
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col md:flex-row gap-8">
-          {/* Sidebar Navigation */}
-          <div className="w-full md:w-64 flex-shrink-0">
-            <div className="bg-white rounded-xl shadow-sm p-4">
-              <h2 className="text-lg font-bold text-gray-900 mb-4">Bot Settings</h2>
-              
-              <nav className="space-y-1">
-                {[
-                  { id: 'general', icon: FiMessageSquare, label: 'General' },
-                  { id: 'appearance', icon: FiUser, label: 'Appearance' },
-                  { id: 'behavior', icon: FiBell, label: 'Behavior' },
-                  { id: 'security', icon: FiLock, label: 'Security' },
-                  { id: 'integrations', icon: FiGlobe, label: 'Integrations' },
-                ].map((tab) => (
-                  <motion.button
-                    key={tab.id}
-                    whileHover={{ x: 5 }}
-                    className={`flex items-center w-full px-3 py-2 text-sm font-medium rounded-lg ${
-                      activeTab === tab.id 
-                        ? 'bg-indigo-50 text-indigo-700' 
-                        : 'text-gray-700 hover:bg-gray-50'
+      {/* Success Message */}
+      <AnimatePresence>
+        {showSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed top-6 right-6 z-50"
+          >
+            <div className="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center">
+              <FiCheck className="mr-2 text-xl" />
+              Settings saved successfully!
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirmation */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md"
+            >
+              <h3 className="text-xl font-bold text-gray-800 mb-3">Delete Bot</h3>
+              <p className="text-gray-600 mb-6">
+                Are you sure you want to delete <span className="font-semibold">{formData.name}</span>? 
+                This action cannot be undone and all bot data will be permanently removed.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700"
+                >
+                  Cancel
+                </motion.button>
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleDelete}
+                  className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white flex items-center"
+                >
+                  <FiTrash2 className="mr-2" />
+                  Delete Permanently
+                </motion.button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Settings Form */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        {/* Left Column */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.3 }}
+          className="bg-white rounded-xl shadow-md p-6"
+        >
+          <h3 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+            Basic Settings
+          </h3>
+          
+          <div className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Bot Name
+              </label>
+              <input
+                type="text"
+                name="name"
+                value={formData.name}
+                onChange={handleChange}
+                className="input-field"
+                placeholder="Enter bot name"
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Description
+              </label>
+              <textarea
+                name="description"
+                value={formData.description}
+                onChange={handleChange}
+                className="input-field"
+                placeholder="Describe your bot"
+                rows={3}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Avatar URL
+              </label>
+              <div className="flex items-center">
+                <input
+                  type="text"
+                  name="avatar"
+                  value={formData.avatar}
+                  onChange={handleChange}
+                  className="input-field flex-grow"
+                  placeholder="https://example.com/avatar.jpg"
+                />
+                <div className="ml-3 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
+                  <FiImage className="text-gray-500" />
+                </div>
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Greeting Message
+              </label>
+              <textarea
+                name="greetingMessage"
+                value={formData.greetingMessage}
+                onChange={handleChange}
+                className="input-field"
+                placeholder="Enter greeting message"
+                rows={3}
+              />
+            </div>
+          </div>
+        </motion.div>
+        
+        {/* Right Column */}
+        <div className="space-y-8">
+          {/* Theme Color */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.1 }}
+            className="bg-white rounded-xl shadow-md p-6"
+          >
+            <h3 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+              Theme & Appearance
+            </h3>
+            
+            <div className="mb-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Primary Color
+              </label>
+              <div className="flex items-center">
+                <div className="relative w-12 h-12 rounded-lg overflow-hidden mr-4">
+                  <input
+                    type="color"
+                    value={formData.themeColor}
+                    onChange={(e) => handleColorChange(e.target.value)}
+                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                  />
+                  <div 
+                    className="w-full h-full" 
+                    style={{ backgroundColor: formData.themeColor }}
+                  />
+                </div>
+                <input
+                  type="text"
+                  value={formData.themeColor}
+                  onChange={(e) => handleColorChange(e.target.value)}
+                  className="input-field w-32"
+                />
+              </div>
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-3">
+                Color Presets
+              </label>
+              <div className="grid grid-cols-3 gap-3">
+                {colorOptions.map((color) => (
+                  <motion.div
+                    key={color.value}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => handleColorChange(color.value)}
+                    className={`h-10 rounded-lg cursor-pointer flex items-center justify-center ${
+                      formData.themeColor === color.value 
+                        ? 'ring-2 ring-offset-2 ring-gray-800' 
+                        : ''
                     }`}
-                    onClick={() => setActiveTab(tab.id)}
+                    style={{ backgroundColor: color.value }}
                   >
-                    <tab.icon className="mr-3 text-lg" />
-                    {tab.label}
-                  </motion.button>
+                    {formData.themeColor === color.value && (
+                      <FiCheck className="text-white" />
+                    )}
+                  </motion.div>
                 ))}
-              </nav>
-              
-              <div className="mt-8">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Tools</h3>
-                <div className="space-y-2">
-                  <motion.button
-                    whileHover={{ x: 5 }}
-                    className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50"
-                  >
-                    <FiDownload className="mr-3 text-lg" />
-                    Export Bot
-                  </motion.button>
-                  <motion.button
-                    whileHover={{ x: 5 }}
-                    className="flex items-center w-full px-3 py-2 text-sm font-medium rounded-lg text-gray-700 hover:bg-gray-50"
-                  >
-                    <FiUpload className="mr-3 text-lg" />
-                    Import Bot
-                  </motion.button>
+              </div>
+            </div>
+          </motion.div>
+          
+          {/* Preview */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.2 }}
+            className="bg-white rounded-xl shadow-md p-6"
+          >
+            <h3 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
+              Chat Preview
+            </h3>
+            
+            <div className="space-y-4">
+              <div className="flex justify-end">
+                <div 
+                  className="max-w-[80%] rounded-2xl px-4 py-3 shadow-sm"
+                  style={{ 
+                    backgroundColor: formData.themeColor,
+                    color: 'white',
+                    borderBottomRightRadius: '4px'
+                  }}
+                >
+                  <p>{formData.greetingMessage || 'Hello! How can I help you today?'}</p>
+                  <div className="text-xs mt-1 opacity-70">
+                    10:00 AM
+                  </div>
                 </div>
               </div>
               
-              <div className="mt-8 pt-6 border-t border-gray-200">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="flex items-center justify-center w-full px-3 py-2 text-sm font-medium rounded-lg text-red-600 hover:bg-red-50"
-                  onClick={handleDelete}
-                >
-                  <FiTrash2 className="mr-2" />
-                  Delete Bot
-                </motion.button>
+              <div className="flex">
+                <div className="mr-3">
+                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                    <span className="font-medium text-gray-700">U</span>
+                  </div>
+                </div>
+                <div className="max-w-[80%]">
+                  <div className="rounded-2xl px-4 py-3 shadow-sm bg-white border border-gray-200 rounded-tl-none">
+                    <p>Can you help me with something?</p>
+                    <div className="text-xs mt-1 text-gray-500">
+                      10:01 AM
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
+          </motion.div>
           
-          {/* Main Settings Panel */}
-          <div className="flex-1">
-            <div className="bg-white rounded-xl shadow-sm overflow-hidden">
-              {/* Tab Content */}
-              {activeTab === 'general' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-6"
-                >
-                  <h2 className="text-xl font-bold text-gray-900 mb-6">General Settings</h2>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Bot Name</label>
-                      <input
-                        type="text"
-                        value={botName}
-                        onChange={(e) => setBotName(e.target.value)}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Bot Description</label>
-                      <textarea
-                        value={botDescription}
-                        onChange={(e) => setBotDescription(e.target.value)}
-                        rows={3}
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Bot Avatar</label>
-                      <div className="flex items-center">
-                        <div className="bg-indigo-600 w-16 h-16 rounded-full flex items-center justify-center text-white font-bold text-2xl mr-4">
-                          {botAvatar}
-                        </div>
-                        <input
-                          type="text"
-                          value={botAvatar}
-                          onChange={(e) => setBotAvatar(e.target.value.slice(0, 2))}
-                          className="w-24 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-center"
-                        />
-                        <span className="ml-2 text-sm text-gray-500">(2 characters max)</span>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Default Welcome Message</label>
-                      <input
-                        type="text"
-                        defaultValue="Hello! How can I assist you today?"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
+          {/* Danger Zone */}
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.3, delay: 0.3 }}
+            className="bg-red-50 border border-red-200 rounded-xl p-6"
+          >
+            <h3 className="text-xl font-bold text-red-800 mb-4">
+              Danger Zone
+            </h3>
+            
+            <div className="flex flex-col md:flex-row md:items-center justify-between">
+              <div>
+                <h4 className="font-medium text-red-700">Delete this bot</h4>
+                <p className="text-red-600 text-sm mt-1">
+                  Once deleted, this bot cannot be recovered. All data will be permanently removed.
+                </p>
+              </div>
               
-              {activeTab === 'appearance' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-6"
-                >
-                  <h2 className="text-xl font-bold text-gray-900 mb-6">Appearance Settings</h2>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Primary Color</label>
-                      <div className="flex flex-wrap gap-4 mt-2">
-                        {colorOptions.map((color) => (
-                          <motion.button
-                            key={color.value}
-                            whileHover={{ scale: 1.1 }}
-                            whileTap={{ scale: 0.9 }}
-                            className={`w-10 h-10 rounded-full ${primaryColor === color.value ? 'ring-2 ring-offset-2 ring-indigo-500' : ''}`}
-                            style={{ backgroundColor: color.value }}
-                            onClick={() => setPrimaryColor(color.value)}
-                            title={color.name}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Chat Window Theme</label>
-                        <div className="mt-1 space-y-2">
-                          <div className="flex items-center">
-                            <input
-                              type="radio"
-                              id="theme-light"
-                              name="theme"
-                              defaultChecked
-                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <label htmlFor="theme-light" className="ml-3 block text-sm text-gray-700">
-                              Light Theme
-                            </label>
-                          </div>
-                          <div className="flex items-center">
-                            <input
-                              type="radio"
-                              id="theme-dark"
-                              name="theme"
-                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <label htmlFor="theme-dark" className="ml-3 block text-sm text-gray-700">
-                              Dark Theme
-                            </label>
-                          </div>
-                          <div className="flex items-center">
-                            <input
-                              type="radio"
-                              id="theme-auto"
-                              name="theme"
-                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <label htmlFor="theme-auto" className="ml-3 block text-sm text-gray-700">
-                              Auto (System Preference)
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Message Density</label>
-                        <div className="mt-1 space-y-2">
-                          <div className="flex items-center">
-                            <input
-                              type="radio"
-                              id="density-comfortable"
-                              name="density"
-                              defaultChecked
-                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <label htmlFor="density-comfortable" className="ml-3 block text-sm text-gray-700">
-                              Comfortable (Default)
-                            </label>
-                          </div>
-                          <div className="flex items-center">
-                            <input
-                              type="radio"
-                              id="density-compact"
-                              name="density"
-                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500"
-                            />
-                            <label htmlFor="density-compact" className="ml-3 block text-sm text-gray-700">
-                              Compact
-                            </label>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Custom CSS</label>
-                      <textarea
-                        rows={4}
-                        defaultValue="/* Add custom CSS here */"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono text-sm"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              
-              {activeTab === 'behavior' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-6"
-                >
-                  <h2 className="text-xl font-bold text-gray-900 mb-6">Behavior Settings</h2>
-                  
-                  <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Response Speed</label>
-                      <input
-                        type="range"
-                        min="100"
-                        max="3000"
-                        step="100"
-                        defaultValue="1500"
-                        className="w-full"
-                      />
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>Instant</span>
-                        <span>Standard (1.5s)</span>
-                        <span>Deliberate (3s)</span>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Typing Indicator</label>
-                      <div className="mt-1 space-y-2">
-                        <div className="flex items-center">
-                          <input
-                            type="checkbox"
-                            id="typing-indicator"
-                            defaultChecked
-                            className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 rounded"
-                          />
-                          <label htmlFor="typing-indicator" className="ml-3 block text-sm text-gray-700">
-                            Show typing indicator
-                          </label>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Response Style</label>
-                      <select className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent">
-                        <option>Concise and direct</option>
-                        <option>Friendly and conversational</option>
-                        <option>Professional and formal</option>
-                        <option>Technical and detailed</option>
-                      </select>
-                    </div>
-                    
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">Fallback Message</label>
-                      <input
-                        type="text"
-                        defaultValue="I'm sorry, I didn't understand that. Could you rephrase your question?"
-                        className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
-                      />
-                    </div>
-                  </div>
-                </motion.div>
-              )}
-              
-              {/* Other tabs would have similar structure */}
-              
-              {activeTab !== 'general' && activeTab !== 'appearance' && activeTab !== 'behavior' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="p-6"
-                >
-                  <h2 className="text-xl font-bold text-gray-900 mb-6">
-                    {activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Settings
-                  </h2>
-                  <div className="bg-gray-50 rounded-lg p-8 text-center">
-                    <div className="bg-indigo-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <FiSettings size={24} className="text-indigo-600" />
-                    </div>
-                    <h3 className="text-lg font-medium text-gray-900 mb-2">Configuration coming soon</h3>
-                    <p className="text-gray-600">
-                      We're still working on the {activeTab} settings panel. Check back in a future update!
-                    </p>
-                  </div>
-                </motion.div>
-              )}
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setShowDeleteConfirm(true)}
+                className="mt-4 md:mt-0 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center"
+              >
+                <FiTrash2 className="mr-2" />
+                Delete Bot
+              </motion.button>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </main>
-      
-      {/* Footer */}
-      <footer className="bg-white border-t mt-12">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-gray-600 text-sm">© 2025 Intellibotic. All rights reserved.</p>
-            </div>
-            <div className="flex space-x-6">
-              <a href="#" className="text-gray-500 hover:text-gray-700 text-sm">Documentation</a>
-              <a href="#" className="text-gray-500 hover:text-gray-700 text-sm">Support</a>
-              <a href="#" className="text-gray-500 hover:text-gray-700 text-sm">Privacy</a>
-              <a href="#" className="text-gray-500 hover:text-gray-700 text-sm">Terms</a>
-            </div>
-          </div>
-        </div>
-      </footer>
-    </motion.div>
+      </div>
+
+      {/* Save Button */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.3, delay: 0.4 }}
+        className="fixed bottom-6 right-6"
+      >
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={handleSave}
+          disabled={isSaving}
+          className="btn-primary flex items-center shadow-lg"
+        >
+          {isSaving ? (
+            <motion.span
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="h-5 w-5 border-2 border-white border-t-transparent rounded-full"
+            />
+          ) : (
+            <>
+              <FiSave className="mr-2" />
+              Save Settings
+            </>
+          )}
+        </motion.button>
+      </motion.div>
+    </div>
   );
 };
 

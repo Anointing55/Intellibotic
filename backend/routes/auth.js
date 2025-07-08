@@ -1,38 +1,34 @@
-// backend/routes/auth.js
-import express from 'express';
-import jwt from 'jsonwebtoken';
-import bcrypt from 'bcrypt';
-import User from '../models/User.js';
+# backend/routes/auth.py
+from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.security import OAuth2PasswordRequestForm
+from datetime import timedelta
+from backend.utils import auth
+from pydantic import BaseModel
 
-const router = express.Router();
+router = APIRouter()
 
-router.post('/login', async (req, res) => {
-  const { email, password } = req.body;
-  
-  const user = await User.findOne({ email });
-  if (!user || !bcrypt.compareSync(password, user.password)) {
-    return res.status(401).json({ error: 'Invalid credentials' });
-  }
+class Token(BaseModel):
+    access_token: str
+    token_type: str
 
-  const token = jwt.sign(
-    { userId: user._id },
-    process.env.JWT_SECRET,
-    { expiresIn: '1h' }
-  );
+class User(BaseModel):
+    username: str
 
-  res.json({ token, user: { id: user._id, email: user.email } });
-});
+@router.post("/login", response_model=Token)
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = auth.authenticate_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=auth.ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = auth.create_access_token(
+        data={"sub": form_data.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer"}
 
-router.get('/me', (req, res) => {
-  const token = req.headers.authorization?.split(' ')[1];
-  if (!token) return res.status(401).end();
-
-  try {
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    res.json({ user: { id: decoded.userId } });
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-});
-
-export default router;
+@router.get("/me", response_model=User)
+async def read_users_me(current_user: str = Depends(auth.verify_token)):
+    return {"username": current_user}

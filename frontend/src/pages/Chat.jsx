@@ -1,31 +1,40 @@
 // frontend/src/pages/Chat.jsx
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { FiSend, FiArrowLeft, FiTrash2, FiUser, FiBot, FiDownload, FiShare2 } from 'react-icons/fi';
+import axios from 'axios';
+import { FiSend, FiArrowLeft, FiLoader, FiTrash2, FiMessageSquare } from 'react-icons/fi';
 
 const Chat = () => {
+  const { botId } = useParams();
+  const navigate = useNavigate();
   const [messages, setMessages] = useState([]);
-  const [inputValue, setInputValue] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
-  const [botName] = useState('Customer Support Bot');
-  const [userName] = useState('Anointing Omowumi');
+  const [inputText, setInputText] = useState('');
+  const [isSending, setIsSending] = useState(false);
+  const [botName, setBotName] = useState('ChatBot');
+  const [botAvatar, setBotAvatar] = useState('');
   const messagesEndRef = useRef(null);
 
-  // Initial bot greeting
+  // Fetch bot details
   useEffect(() => {
-    setTimeout(() => {
-      setMessages([
-        { 
-          id: 1, 
-          text: "Hello! I'm your customer support assistant. How can I help you today?", 
-          sender: 'bot', 
-          timestamp: new Date() 
-        }
-      ]);
-    }, 500);
-  }, []);
+    const fetchBotDetails = async () => {
+      try {
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`/api/bots/${botId}`, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+        
+        setBotName(response.data.name);
+        setBotAvatar(response.data.config?.avatar || '');
+      } catch (error) {
+        console.error('Error fetching bot details:', error);
+      }
+    };
+    
+    fetchBotDetails();
+  }, [botId]);
 
-  // Scroll to bottom when new messages arrive
+  // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
@@ -34,279 +43,274 @@ const Chat = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
-  const handleSend = () => {
-    if (inputValue.trim() === '') return;
+  // Handle sending a message
+  const handleSendMessage = async () => {
+    if (!inputText.trim() || isSending) return;
     
     // Add user message
-    const newUserMessage = {
-      id: messages.length + 1,
-      text: inputValue,
+    const userMessage = {
+      id: Date.now(),
+      text: inputText,
       sender: 'user',
-      timestamp: new Date()
+      timestamp: new Date(),
     };
     
-    setMessages(prev => [...prev, newUserMessage]);
-    setInputValue('');
+    setMessages(prev => [...prev, userMessage]);
+    setInputText('');
+    setIsSending(true);
     
-    // Simulate bot typing
-    setIsTyping(true);
-    
-    // Simulate bot response after delay
-    setTimeout(() => {
-      const responses = [
-        "I understand your concern. Let me check that for you.",
-        "That's a great question! Here's what I can tell you...",
-        "I can definitely help with that. First, could you provide more details?",
-        "Thanks for sharing. Based on what you've said, I recommend...",
-        "I've processed your request. Here are the next steps...",
-        "I see. Let me guide you through the solution.",
-        "Thanks for your patience. Here's the information you requested."
-      ];
+    try {
+      // In a real app, this would call the bot's API
+      // For now, simulate a response with a delay
+      await new Promise(resolve => setTimeout(resolve, 1000));
       
-      const randomResponse = responses[Math.floor(Math.random() * responses.length)];
-      
-      const newBotMessage = {
-        id: messages.length + 2,
-        text: randomResponse,
+      // Generate bot response
+      const botResponse = {
+        id: Date.now() + 1,
+        text: generateBotResponse(inputText),
         sender: 'bot',
-        timestamp: new Date()
+        timestamp: new Date(),
       };
       
-      setMessages(prev => [...prev, newBotMessage]);
-      setIsTyping(false);
-    }, 1500 + Math.random() * 1000);
+      setMessages(prev => [...prev, botResponse]);
+    } catch (error) {
+      console.error('Error getting bot response:', error);
+      
+      const errorResponse = {
+        id: Date.now() + 1,
+        text: "I'm having trouble responding right now. Please try again later.",
+        sender: 'bot',
+        timestamp: new Date(),
+      };
+      
+      setMessages(prev => [...prev, errorResponse]);
+    } finally {
+      setIsSending(false);
+    }
   };
 
+  // Simple bot response generation
+  const generateBotResponse = (input) => {
+    const inputLower = input.toLowerCase();
+    
+    if (inputLower.includes('hello') || inputLower.includes('hi')) {
+      return "Hello there! How can I assist you today?";
+    }
+    
+    if (inputLower.includes('how are you')) {
+      return "I'm just a bot, but I'm functioning perfectly! How can I help you?";
+    }
+    
+    if (inputLower.includes('thank')) {
+      return "You're welcome! Is there anything else I can help with?";
+    }
+    
+    if (inputLower.includes('bye') || inputLower.includes('goodbye')) {
+      return "Goodbye! Feel free to chat again anytime.";
+    }
+    
+    const responses = [
+      "That's interesting! Can you tell me more?",
+      "I understand. How else can I assist you?",
+      "Thanks for sharing that information.",
+      "I'm here to help with any questions you have.",
+      "Could you clarify that for me?",
+      "I'm still learning, but I'll do my best to help!",
+      "That's a great point. What would you like to do next?",
+      "I've noted your input. Is there anything specific you need help with?"
+    ];
+    
+    return responses[Math.floor(Math.random() * responses.length)];
+  };
+
+  // Clear chat history
+  const clearChat = () => {
+    setMessages([]);
+  };
+
+  // Handle Enter key press
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      handleSend();
+      handleSendMessage();
     }
-  };
-
-  const clearChat = () => {
-    setMessages([]);
-    setIsTyping(false);
-    
-    // Show new greeting after clearing
-    setTimeout(() => {
-      setMessages([
-        { 
-          id: 1, 
-          text: "Hello again! How can I assist you today?", 
-          sender: 'bot', 
-          timestamp: new Date() 
-        }
-      ]);
-    }, 300);
-  };
-
-  const exportChat = () => {
-    const chatData = messages.map(msg => ({
-      sender: msg.sender === 'user' ? userName : botName,
-      text: msg.text,
-      time: msg.timestamp.toLocaleTimeString()
-    }));
-    
-    const json = JSON.stringify(chatData, null, 2);
-    const blob = new Blob([json], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${botName.replace(/\s+/g, '_')}_chat_history.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const shareChat = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: `Chat with ${botName}`,
-        text: 'Check out this conversation I had with my chatbot!',
-        url: window.location.href
-      }).catch(console.error);
-    } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
-    }
-  };
-
-  const formatTime = (date) => {
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
-    <motion.div 
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-blue-50"
-    >
-      {/* Header */}
-      <div className="bg-white shadow-sm">
-        <div className="max-w-full mx-auto px-4 py-3 flex items-center">
+    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Chat Header */}
+      <motion.div
+        initial={{ y: -20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-white shadow-sm py-4 px-6 flex items-center justify-between"
+      >
+        <div className="flex items-center">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            className="p-2 rounded-lg hover:bg-gray-100 mr-2"
-            onClick={() => window.history.back()}
+            onClick={() => navigate(-1)}
+            className="flex items-center text-gray-600 hover:text-gray-800 mr-4"
           >
-            <FiArrowLeft size={20} />
+            <FiArrowLeft className="mr-1" />
+            Back
           </motion.button>
           
-          <div className="flex-1 flex items-center">
-            <div className="bg-indigo-600 w-10 h-10 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">IB</span>
+          <div className="flex items-center">
+            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white font-bold mr-3">
+              {botAvatar ? (
+                <img 
+                  src={botAvatar} 
+                  alt={botName} 
+                  className="w-10 h-10 rounded-full object-cover"
+                />
+              ) : (
+                <FiMessageSquare size={20} />
+              )}
             </div>
-            <div className="ml-3">
-              <h1 className="font-bold text-gray-900">{botName}</h1>
-              <p className="text-xs text-gray-600">Testing conversation flow</p>
+            <div>
+              <h1 className="font-semibold text-gray-800">{botName}</h1>
+              <p className="text-xs text-gray-500">Testing Mode</p>
             </div>
-          </div>
-          
-          <div className="flex space-x-2">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-2 rounded-lg hover:bg-gray-100"
-              onClick={shareChat}
-              title="Share chat"
-            >
-              <FiShare2 size={18} />
-            </motion.button>
-            
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-2 rounded-lg hover:bg-gray-100"
-              onClick={exportChat}
-              title="Export chat"
-            >
-              <FiDownload size={18} />
-            </motion.button>
-            
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="p-2 rounded-lg hover:bg-red-100 text-red-600"
-              onClick={clearChat}
-              title="Clear chat"
-            >
-              <FiTrash2 size={18} />
-            </motion.button>
           </div>
         </div>
+        
+        <motion.button
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          onClick={clearChat}
+          className="flex items-center text-red-500 hover:text-red-600"
+        >
+          <FiTrash2 className="mr-1" />
+          Clear Chat
+        </motion.button>
+      </motion.div>
+
+      {/* Messages Container */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
+        <div className="max-w-3xl mx-auto">
+          <AnimatePresence>
+            {messages.length === 0 ? (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col items-center justify-center h-full text-center py-12"
+              >
+                <div className="bg-gradient-to-r from-primary to-secondary p-4 rounded-full mb-6">
+                  <FiMessageSquare className="text-white text-4xl" />
+                </div>
+                <h2 className="text-2xl font-bold text-gray-800 mb-2">Start a Conversation</h2>
+                <p className="text-gray-600 max-w-md">
+                  Send a message to test {botName}. Try asking a question or saying hello!
+                </p>
+              </motion.div>
+            ) : (
+              messages.map((message) => (
+                <motion.div
+                  key={message.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, x: message.sender === 'user' ? 50 : -50 }}
+                  transition={{ duration: 0.3 }}
+                  className={`flex mb-6 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  {message.sender === 'bot' && (
+                    <div className="mr-3 mt-1">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white">
+                        {botAvatar ? (
+                          <img 
+                            src={botAvatar} 
+                            alt={botName} 
+                            className="w-8 h-8 rounded-full object-cover"
+                          />
+                        ) : (
+                          <FiMessageSquare size={16} />
+                        )}
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className={`max-w-[80%] md:max-w-[70%]`}>
+                    <motion.div
+                      whileHover={{ scale: 1.01 }}
+                      className={`rounded-2xl px-4 py-3 shadow-sm ${
+                        message.sender === 'user' 
+                          ? 'bg-primary text-white rounded-tr-none' 
+                          : 'bg-white border border-gray-200 rounded-tl-none'
+                      }`}
+                    >
+                      <p className="whitespace-pre-wrap">{message.text}</p>
+                      <div className={`text-xs mt-1 ${message.sender === 'user' ? 'text-white/70' : 'text-gray-500'}`}>
+                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </div>
+                    </motion.div>
+                  </div>
+                  
+                  {message.sender === 'user' && (
+                    <div className="ml-3 mt-1">
+                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
+                        <span className="font-medium text-gray-700">U</span>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              ))
+            )}
+          </AnimatePresence>
+          <div ref={messagesEndRef} />
+        </div>
       </div>
-      
-      {/* Chat Container */}
-      <div className="flex-1 overflow-y-auto p-4 pb-20 md:px-8 md:py-6">
-        <AnimatePresence>
-          {messages.map((message) => (
-            <motion.div
-              key={message.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              transition={{ duration: 0.2 }}
-              className={`flex mb-4 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-            >
-              <div 
-                className={`max-w-[85%] md:max-w-[70%] rounded-2xl px-4 py-3 ${
-                  message.sender === 'user' 
-                    ? 'bg-indigo-600 text-white rounded-tr-none' 
-                    : 'bg-white border border-gray-200 rounded-tl-none'
+
+      {/* Input Area */}
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        className="bg-white border-t border-gray-200 py-4 px-4"
+      >
+        <div className="max-w-3xl mx-auto flex">
+          <div className="flex-1 relative">
+            <textarea
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+              onKeyDown={handleKeyPress}
+              placeholder="Type your message..."
+              className="w-full px-4 py-3 pr-12 bg-gray-100 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent border-none resize-none transition-all"
+              rows={1}
+              style={{ minHeight: '56px', maxHeight: '150px' }}
+            />
+            
+            <div className="absolute right-3 bottom-3 flex items-center">
+              {isSending && (
+                <motion.div
+                  animate={{ rotate: 360 }}
+                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                  className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full mr-2"
+                />
+              )}
+              
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={handleSendMessage}
+                disabled={!inputText.trim() || isSending}
+                className={`p-2 rounded-full ${
+                  inputText.trim() && !isSending
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                <div className="flex items-start">
-                  <div className={`mr-3 mt-1 p-1 rounded-full ${message.sender === 'user' ? 'bg-indigo-700' : 'bg-gray-100'}`}>
-                    {message.sender === 'user' ? (
-                      <FiUser className="text-white" size={14} />
-                    ) : (
-                      <FiBot className="text-indigo-600" size={14} />
-                    )}
-                  </div>
-                  <div>
-                    <p className="whitespace-pre-wrap break-words">{message.text}</p>
-                    <div className={`text-xs mt-2 ${message.sender === 'user' ? 'text-indigo-200' : 'text-gray-500'}`}>
-                      {formatTime(message.timestamp)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-          
-          {isTyping && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex mb-4 justify-start"
-            >
-              <div className="bg-white border border-gray-200 rounded-2xl rounded-tl-none px-4 py-3">
-                <div className="flex items-center">
-                  <div className="mr-3 p-1 rounded-full bg-gray-100">
-                    <FiBot className="text-indigo-600" size={14} />
-                  </div>
-                  <div className="flex space-x-1">
-                    <motion.div
-                      animate={{ y: [0, -5, 0] }}
-                      transition={{ repeat: Infinity, duration: 0.8, repeatType: "reverse" }}
-                      className="w-2 h-2 bg-gray-400 rounded-full"
-                    />
-                    <motion.div
-                      animate={{ y: [0, -5, 0] }}
-                      transition={{ repeat: Infinity, duration: 0.8, repeatType: "reverse", delay: 0.2 }}
-                      className="w-2 h-2 bg-gray-400 rounded-full"
-                    />
-                    <motion.div
-                      animate={{ y: [0, -5, 0] }}
-                      transition={{ repeat: Infinity, duration: 0.8, repeatType: "reverse", delay: 0.4 }}
-                      className="w-2 h-2 bg-gray-400 rounded-full"
-                    />
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          )}
-          
-          <div ref={messagesEndRef} />
-        </AnimatePresence>
-      </div>
-      
-      {/* Input Area */}
-      <div className="bg-white border-t border-gray-200 p-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-end bg-gray-100 rounded-2xl px-4 py-3">
-            <textarea
-              value={inputValue}
-              onChange={(e) => setInputValue(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder="Type your message here..."
-              className="flex-1 bg-transparent border-0 focus:ring-0 resize-none max-h-32"
-              rows={1}
-            />
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className={`ml-3 p-3 rounded-full ${
-                inputValue.trim() 
-                  ? 'bg-indigo-600 text-white hover:bg-indigo-700' 
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-              }`}
-              onClick={handleSend}
-              disabled={!inputValue.trim()}
-            >
-              <FiSend size={18} />
-            </motion.button>
-          </div>
-          
-          <div className="mt-3 text-center text-xs text-gray-500">
-            Press Enter to send • Shift+Enter for new line
+                <FiSend size={18} />
+              </motion.button>
+            </div>
           </div>
         </div>
-      </div>
-    </motion.div>
+        
+        <div className="max-w-3xl mx-auto mt-2 text-center">
+          <p className="text-xs text-gray-500">
+            Press Enter to send • Shift+Enter for new line
+          </p>
+        </div>
+      </motion.div>
+    </div>
   );
 };
 

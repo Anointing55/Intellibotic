@@ -1,82 +1,56 @@
+# backend/main.py
 import os
-import json
-import uuid
-from fastapi import FastAPI, HTTPException, Depends, status, UploadFile, File
-from fastapi.security import OAuth2PasswordBearer
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
-from typing import List, Optional
 from datetime import datetime, timedelta
+from fastapi import FastAPI, HTTPException, Depends, status, Request
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse, FileResponse
 from jose import JWTError, jwt
-import databases
-import sqlalchemy
+from passlib.context import CryptContext
+from pydantic import BaseModel
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
+from typing import Optional
+from backend.routes import auth, bots
 
-# Database setup
-DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://user:password@localhost/intellibotic")
-database = databases.Database(DATABASE_URL)
-metadata = sqlalchemy.MetaData()
+# Environment variables
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://intellibotic_user:vMJoq4OXxhqziEqt5LRHAOARZUOZ6im8@dpg-d1mgd23e5dus73bh0b4g-a/intellibotic")
+JWT_SECRET_KEY = os.getenv("JWT_SECRET_KEY", "intellibotic_secret_key_123")
+JWT_ALGORITHM = os.getenv("JWT_ALGORITHM", "HS256")
+ACCESS_TOKEN_EXPIRE_MINUTES = 30
 
-# SQLAlchemy models
-bots = sqlalchemy.Table(
-    "bots",
-    metadata,
-    sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
-    sqlalchemy.Column("name", sqlalchemy.String),
-    sqlalchemy.Column("description", sqlalchemy.String),
-    sqlalchemy.Column("created_at", sqlalchemy.DateTime),
-    sqlalchemy.Column("updated_at", sqlalchemy.DateTime),
-    sqlalchemy.Column("flow_data", sqlalchemy.JSON),
-)
+# Hardcoded credentials
+HARDCODED_USERNAME = "Anointing Omowumi"
+HARDCODED_PASSWORD = "Ayobami55"
 
-features = sqlalchemy.Table(
-    "features",
-    metadata,
-    sqlalchemy.Column("id", sqlalchemy.String, primary_key=True),
-    sqlalchemy.Column("name", sqlalchemy.String),
-    sqlalchemy.Column("node_type", sqlalchemy.String),
-    sqlalchemy.Column("config", sqlalchemy.JSON),
-)
-
-engine = sqlalchemy.create_engine(DATABASE_URL)
-metadata.create_all(engine)
-
-# Pydantic models
-class BotBase(BaseModel):
-    name: str
-    description: Optional[str] = None
-    flow_data: dict
-
-class BotDB(BotBase):
-    id: str
-    created_at: datetime
-    updated_at: datetime
-
-class FeatureBase(BaseModel):
-    name: str
-    node_type: str
-    config: dict
-
-class FeatureDB(FeatureBase):
-    id: str
-
-class User(BaseModel):
-    full_name: str
-    password: str
-
+# Models
 class Token(BaseModel):
     access_token: str
     token_type: str
 
-# Hardcoded credentials
-HARDCODED_USER = User(full_name="Anointing Omowumi", password="Ayobami55")
-SECRET_KEY = "intellibotic_secret_key"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+class TokenData(BaseModel):
+    username: Optional[str] = None
 
-app = FastAPI(title="Intellibotic API")
+class User(BaseModel):
+    username: str
 
-# CORS setup
+# Password context
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+
+# Database setup
+engine = create_engine(DATABASE_URL)
+SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+
+# FastAPI app
+app = FastAPI(
+    title="Intellibotic API",
+    description="Backend for Intellibotic chatbot platform",
+    version="0.1.0"
+)
+
+# CORS configuration
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -85,100 +59,79 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# JWT functions
-def create_access_token(data: dict):
-    to_encode = data.copy()
-    expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
-    to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
-    return encoded_jwt
+# Authentication functions
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
+def authenticate_user(username: str, password: str):
+    if username != HARDCODED_USERNAME:
+        return False
+    if password != HARDCODED_PASSWORD:
+        return False
+    return User(username=username)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=15)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    return encoded_jwt
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
-        detail="Invalid credentials",
+        detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        payload = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
         username: str = payload.get("sub")
         if username is None:
             raise credentials_exception
+        token_data = TokenData(username=username)
     except JWTError:
         raise credentials_exception
-    return username
+    user = authenticate_user(token_data.username, "")
+    if user is None:
+        raise credentials_exception
+    return user
 
-# Database connection
-@app.on_event("startup")
-async def startup():
-    await database.connect()
-
-@app.on_event("shutdown")
-async def shutdown():
-    await database.disconnect()
-
-# API Endpoints
+# API endpoints
 @app.post("/api/login", response_model=Token)
-async def login(user: User):
-    if user.full_name != HARDCODED_USER.full_name or user.password != HARDCODED_USER.password:
-        raise HTTPException(status_code=400, detail="Invalid credentials")
-    
-    access_token = create_access_token(data={"sub": user.full_name})
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends()):
+    user = authenticate_user(form_data.username, form_data.password)
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
     return {"access_token": access_token, "token_type": "bearer"}
 
-@app.get("/api/bots", response_model=List[BotDB])
-async def read_bots(current_user: str = Depends(get_current_user)):
-    query = bots.select()
-    return await database.fetch_all(query)
+@app.get("/api/me", response_model=User)
+async def read_users_me(current_user: User = Depends(get_current_user)):
+    return current_user
 
-@app.post("/api/bots", response_model=BotDB)
-async def create_bot(bot: BotBase, current_user: str = Depends(get_current_user)):
-    bot_id = str(uuid.uuid4())
-    now = datetime.now()
-    
-    # Save to database
-    query = bots.insert().values(
-        id=bot_id,
-        name=bot.name,
-        description=bot.description,
-        created_at=now,
-        updated_at=now,
-        flow_data=bot.flow_data
-    )
-    await database.execute(query)
-    
-    # Save to JSON file
-    os.makedirs("backend/bots", exist_ok=True)
-    with open(f"backend/bots/{bot.name}.json", "w") as f:
-        json.dump({**bot.dict(), "id": bot_id, "created_at": now.isoformat(), "updated_at": now.isoformat()}, f)
-    
-    return {**bot.dict(), "id": bot_id, "created_at": now, "updated_at": now}
-
-@app.post("/api/import-bot")
-async def import_bot(file: UploadFile = File(...), current_user: str = Depends(get_current_user)):
-    contents = await file.read()
-    bot_data = json.loads(contents)
-    
-    # Save to database
-    bot_id = str(uuid.uuid4())
-    now = datetime.now()
-    query = bots.insert().values(
-        id=bot_id,
-        name=bot_data["name"],
-        description=bot_data.get("description", ""),
-        created_at=now,
-        updated_at=now,
-        flow_data=bot_data["flow_data"]
-    )
-    await database.execute(query)
-    
-    # Save to JSON file
-    with open(f"backend/bots/{bot_data['name']}.json", "w") as f:
-        json.dump({**bot_data, "id": bot_id, "created_at": now.isoformat(), "updated_at": now.isoformat()}, f)
-    
-    return {"status": "success", "bot_id": bot_id}
+@app.get("/api/test")
+async def test_endpoint():
+    return {"message": "Backend is working!", "status": "success"}
 
 # Serve React frontend
-app.mount("/", StaticFiles(directory="frontend/dist", html=True), name="static")
+app.mount("/", StaticFiles(directory="frontend/build", html=True), name="static")
+
+# Catch-all route for React Router
+@app.exception_handler(404)
+async def catch_all(request: Request, exc: HTTPException):
+    return FileResponse("frontend/build/index.html")
+
+# Include routers
+app.include_router(auth.router, prefix="/api")
+app.include_router(bots.router, prefix="/api/bots")
+
