@@ -1,284 +1,334 @@
-// frontend/src/pages/Dashboard.jsx
+// src/pages/Dashboard.jsx
 import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
+import { FiPlus, FiSearch, FiChevronRight, FiEdit, FiTrash2, FiMoreVertical, FiActivity } from 'react-icons/fi';
 import { useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import axios from 'axios';
-import { FiPlus, FiSearch, FiLoader, FiTrash2, FiEdit, FiMessageSquare } from 'react-icons/fi';
 
 const Dashboard = () => {
-  const [bots, setBots] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [isCreating, setIsCreating] = useState(false);
-  const [newBotName, setNewBotName] = useState('');
   const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
+  const [bots, setBots] = useState([]);
+  
+  // Mock bot data - in a real app, this would come from an API
+  const mockBots = [
+    {
+      id: 1,
+      name: "Customer Support Bot",
+      description: "Handles customer inquiries and support tickets",
+      lastModified: "2025-07-05",
+      status: "active",
+      conversations: 142
+    },
+    {
+      id: 2,
+      name: "Sales Assistant",
+      description: "Guides users through product selection and purchase",
+      lastModified: "2025-07-01",
+      status: "active",
+      conversations: 89
+    },
+    {
+      id: 3,
+      name: "HR Onboarding",
+      description: "Helps new employees with onboarding process",
+      lastModified: "2025-06-28",
+      status: "draft",
+      conversations: 32
+    },
+    {
+      id: 4,
+      name: "IT Helpdesk",
+      description: "Resolves common IT issues and tickets",
+      lastModified: "2025-06-20",
+      status: "active",
+      conversations: 210
+    }
+  ];
 
-  // Fetch bots from API
   useEffect(() => {
-    const fetchBots = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get('/api/bots', {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        setBots(response.data);
-      } catch (error) {
-        console.error('Error fetching bots:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
+    // Simulate API loading
+    const timer = setTimeout(() => {
+      setBots(mockBots);
+      setIsLoading(false);
+    }, 1200);
     
-    fetchBots();
+    return () => clearTimeout(timer);
   }, []);
 
-  // Filter bots based on search term
-  const filteredBots = bots.filter(bot => 
-    bot.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (bot.description && bot.description.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
-
-  // Create new bot
-  const handleCreateBot = async () => {
-    if (!newBotName.trim()) return;
-    
-    setIsCreating(true);
-    try {
-      const token = localStorage.getItem('token');
-      const response = await axios.post('/api/bots', {
-        name: newBotName,
-        description: "A new intelligent chatbot",
-        config: { nodes: [], edges: [] }
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setBots([...bots, response.data]);
-      setNewBotName('');
-      navigate(`/builder/${response.data.id}`);
-    } catch (error) {
-      console.error('Error creating bot:', error);
-    } finally {
-      setIsCreating(false);
-    }
+  const handleCreateNewBot = () => {
+    // In a real app, this would create a new bot in the backend
+    navigate('/builder/new');
   };
 
-  // Delete bot
-  const handleDeleteBot = async (botId, e) => {
-    e.stopPropagation();
-    if (!window.confirm('Are you sure you want to delete this bot?')) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`/api/bots/${botId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      setBots(bots.filter(bot => bot.id !== botId));
-    } catch (error) {
-      console.error('Error deleting bot:', error);
-    }
-  };
-
-  // Edit bot
-  const handleEditBot = (botId, e) => {
-    e.stopPropagation();
-    // For now, we'll navigate to settings, but could open modal
-    navigate(`/settings?botId=${botId}`);
-  };
-
-  // Navigate to bot builder
-  const goToBotBuilder = (botId) => {
+  const handleBotClick = (botId) => {
     navigate(`/builder/${botId}`);
   };
 
-  // Navigate to chat
-  const goToChat = (botId, e) => {
-    e.stopPropagation();
-    navigate(`/chat/${botId}`);
+  const filteredBots = bots.filter(bot => 
+    bot.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    bot.description.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Card animation variants
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: i * 0.1,
+        duration: 0.4,
+        ease: "easeOut"
+      }
+    }),
+    hover: {
+      y: -5,
+      boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)",
+      transition: { duration: 0.2 }
+    },
+    tap: { scale: 0.98 }
   };
 
   return (
-    <div className="container mx-auto">
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
-        className="mb-8"
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="min-h-screen bg-gray-50"
+    >
+      {/* Header */}
+      <motion.div 
+        initial={{ y: -20 }}
+        animate={{ y: 0 }}
+        className="bg-white shadow-sm"
       >
-        <h1 className="text-3xl font-bold text-gray-800 mb-2">Your Chatbot Dashboard</h1>
-        <p className="text-gray-600">Create, manage, and test your intelligent chatbots</p>
-      </motion.div>
-
-      {/* Search and Create Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.1 }}
-        className="bg-white rounded-xl shadow-md p-6 mb-8"
-      >
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative flex-grow">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <FiSearch className="text-gray-400" />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between">
+            <div>
+              <motion.h1 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.1 }}
+                className="text-3xl font-bold text-gray-900"
+              >
+                My Chatbots
+              </motion.h1>
+              <motion.p 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="mt-2 text-gray-600"
+              >
+                Create, manage, and deploy your intelligent chatbots
+              </motion.p>
             </div>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search your bots..."
-              className="input-field pl-10"
-            />
-          </div>
-          
-          <div className="flex space-x-3">
-            <input
-              type="text"
-              value={newBotName}
-              onChange={(e) => setNewBotName(e.target.value)}
-              placeholder="New bot name"
-              className="input-field flex-grow"
-            />
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleCreateBot}
-              disabled={isCreating || !newBotName.trim()}
-              className="btn-primary flex items-center whitespace-nowrap"
-            >
-              {isCreating ? (
-                <motion.span
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="h-5 w-5 border-2 border-white border-t-transparent rounded-full"
-                />
-              ) : (
-                <>
-                  <FiPlus className="mr-2" />
-                  Create Bot
-                </>
-              )}
-            </motion.button>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* Bot Grid */}
-      {isLoading ? (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="flex justify-center items-center h-64"
-        >
-          <motion.div
-            animate={{ rotate: 360 }}
-            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="h-12 w-12 border-4 border-primary border-t-transparent rounded-full"
-          />
-        </motion.div>
-      ) : filteredBots.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.4, delay: 0.2 }}
-          className="bg-white rounded-xl shadow-md p-12 text-center"
-        >
-          <div className="bg-gray-100 w-24 h-24 rounded-full flex items-center justify-center mx-auto mb-6">
-            <FiMessageSquare className="text-gray-400 text-4xl" />
-          </div>
-          <h3 className="text-2xl font-semibold text-gray-700 mb-2">No bots found</h3>
-          <p className="text-gray-500 mb-6">
-            {searchTerm ? 'No bots match your search. Try a different term.' : 'Create your first bot to get started!'}
-          </p>
-          <motion.button
-            whileHover={{ scale: 1.05 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => {
-              setSearchTerm('');
-              document.querySelector('input[placeholder="New bot name"]')?.focus();
-            }}
-            className="btn-primary"
-          >
-            <FiPlus className="mr-2" />
-            Create New Bot
-          </motion.button>
-        </motion.div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredBots.map((bot, index) => (
+            
             <motion.div
-              key={bot.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.4, delay: 0.1 + index * 0.05 }}
-              whileHover={{ y: -5, boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.1)' }}
-              className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 cursor-pointer"
-              onClick={() => goToBotBuilder(bot.id)}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.3 }}
+              className="mt-4 md:mt-0"
             >
-              <div className="p-5">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h3 className="text-xl font-bold text-gray-800 truncate">{bot.name}</h3>
-                    <p className="text-gray-500 text-sm mt-1">
-                      Created: {new Date(bot.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="bg-gradient-to-r from-primary to-secondary w-12 h-12 rounded-lg flex items-center justify-center">
-                    <FiMessageSquare className="text-white text-xl" />
-                  </div>
+              <div className="relative rounded-md shadow-sm">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <FiSearch className="text-gray-400" />
                 </div>
-                
-                <p className="text-gray-600 mb-4 h-12 overflow-hidden">
-                  {bot.description || "No description provided"}
-                </p>
-                
-                <div className="flex justify-between items-center">
-                  <div className="flex space-x-2">
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => handleEditBot(bot.id, e)}
-                      className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-600"
-                      title="Edit Bot"
-                    >
-                      <FiEdit />
-                    </motion.button>
-                    <motion.button
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={(e) => handleDeleteBot(bot.id, e)}
-                      className="p-2 rounded-lg bg-gray-100 hover:bg-red-100 text-gray-600 hover:text-red-600"
-                      title="Delete Bot"
-                    >
-                      <FiTrash2 />
-                    </motion.button>
-                  </div>
-                  
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={(e) => goToChat(bot.id, e)}
-                    className="flex items-center text-sm bg-primary/10 text-primary hover:bg-primary/20 px-3 py-1.5 rounded-lg"
-                  >
-                    <FiMessageSquare className="mr-1" />
-                    Test Chat
-                  </motion.button>
-                </div>
-              </div>
-              
-              <div className="bg-gray-50 px-5 py-3 border-t border-gray-100 flex justify-between text-xs text-gray-500">
-                <span>ID: {bot.id}</span>
-                <span>
-                  Last updated: {bot.updated_at ? 
-                    new Date(bot.updated_at).toLocaleDateString() : 
-                    'Never'}
-                </span>
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  placeholder="Search chatbots..."
+                />
               </div>
             </motion.div>
-          ))}
+          </div>
         </div>
-      )}
-    </div>
+      </motion.div>
+
+      {/* Main Content */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {isLoading ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+            {[1, 2, 3, 4].map((i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: i * 0.1 }}
+                className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-64"
+              >
+                <div className="animate-pulse">
+                  <div className="h-4 bg-gray-200 rounded w-3/4 mb-4"></div>
+                  <div className="h-3 bg-gray-200 rounded w-full mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-5/6 mb-2"></div>
+                  <div className="h-3 bg-gray-200 rounded w-4/6 mb-8"></div>
+                  <div className="h-8 bg-gray-200 rounded"></div>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {/* Create New Bot Card */}
+              <motion.div
+                variants={cardVariants}
+                initial="hidden"
+                animate="visible"
+                whileHover="hover"
+                whileTap="tap"
+                custom={0}
+                onClick={handleCreateNewBot}
+                className="cursor-pointer group"
+              >
+                <div className="bg-gradient-to-br from-blue-50 to-indigo-50 border-2 border-dashed border-blue-200 rounded-xl p-6 h-64 flex flex-col items-center justify-center transition-all duration-300 group-hover:border-blue-400">
+                  <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-4 group-hover:bg-blue-200 transition-colors">
+                    <motion.div
+                      whileHover={{ rotate: 180, scale: 1.1 }}
+                      className="text-blue-600"
+                    >
+                      <FiPlus size={32} />
+                    </motion.div>
+                  </div>
+                  <h3 className="text-xl font-semibold text-blue-700 mb-2">Create New Bot</h3>
+                  <p className="text-center text-blue-500 text-sm">Start building your intelligent chatbot</p>
+                </div>
+              </motion.div>
+
+              {/* Bot Cards */}
+              <AnimatePresence>
+                {filteredBots.map((bot, index) => (
+                  <motion.div
+                    key={bot.id}
+                    variants={cardVariants}
+                    initial="hidden"
+                    animate="visible"
+                    whileHover="hover"
+                    whileTap="tap"
+                    custom={index + 1}
+                    exit={{ opacity: 0, scale: 0.9 }}
+                    className="cursor-pointer"
+                    onClick={() => handleBotClick(bot.id)}
+                  >
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-64 flex flex-col justify-between hover:border-blue-300 transition-colors">
+                      <div>
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900 mb-1">{bot.name}</h3>
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              bot.status === 'active' 
+                                ? 'bg-green-100 text-green-800' 
+                                : 'bg-yellow-100 text-yellow-800'
+                            }`}>
+                              {bot.status === 'active' ? 'Active' : 'Draft'}
+                            </span>
+                          </div>
+                          <button 
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Handle menu click
+                            }}
+                            className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100"
+                          >
+                            <FiMoreVertical />
+                          </button>
+                        </div>
+                        <p className="mt-3 text-gray-600 text-sm line-clamp-3">{bot.description}</p>
+                      </div>
+                      
+                      <div className="mt-4">
+                        <div className="flex items-center justify-between text-sm text-gray-500">
+                          <div className="flex items-center">
+                            <FiActivity className="mr-1" />
+                            <span>{bot.conversations} conversations</span>
+                          </div>
+                          <span>Modified: {bot.lastModified}</span>
+                        </div>
+                        
+                        <motion.button
+                          whileHover={{ x: 5 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleBotClick(bot.id);
+                          }}
+                          className="mt-4 w-full flex items-center justify-between px-4 py-2 border border-gray-300 rounded-lg text-blue-600 hover:bg-blue-50 transition-colors"
+                        >
+                          <span>Edit Bot</span>
+                          <FiChevronRight />
+                        </motion.button>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
+            
+            {filteredBots.length === 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="text-center py-16"
+              >
+                <div className="mx-auto h-24 w-24 rounded-full bg-blue-50 flex items-center justify-center mb-6">
+                  <FiSearch className="text-blue-500" size={48} />
+                </div>
+                <h3 className="text-xl font-medium text-gray-900 mb-2">No bots found</h3>
+                <p className="text-gray-500 max-w-md mx-auto">
+                  We couldn't find any chatbots matching "{searchQuery}". Try a different search term or create a new bot.
+                </p>
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleCreateNewBot}
+                  className="mt-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  <FiPlus className="mr-2" />
+                  Create New Bot
+                </motion.button>
+              </motion.div>
+            )}
+          </>
+        )}
+      </div>
+      
+      {/* Stats Bar */}
+      <motion.div 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ delay: 0.8 }}
+        className="bg-white border-t border-gray-200 py-4"
+      >
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col md:flex-row md:justify-between md:items-center">
+            <div className="mb-4 md:mb-0">
+              <h4 className="text-sm font-medium text-gray-900">Total Bots</h4>
+              <p className="text-2xl font-bold text-blue-600">{bots.length}</p>
+            </div>
+            <div className="mb-4 md:mb-0">
+              <h4 className="text-sm font-medium text-gray-900">Active Bots</h4>
+              <p className="text-2xl font-bold text-green-600">
+                {bots.filter(bot => bot.status === 'active').length}
+              </p>
+            </div>
+            <div className="mb-4 md:mb-0">
+              <h4 className="text-sm font-medium text-gray-900">Total Conversations</h4>
+              <p className="text-2xl font-bold text-indigo-600">
+                {bots.reduce((sum, bot) => sum + bot.conversations, 0)}
+              </p>
+            </div>
+            <div>
+              <h4 className="text-sm font-medium text-gray-900">In Draft</h4>
+              <p className="text-2xl font-bold text-yellow-600">
+                {bots.filter(bot => bot.status === 'draft').length}
+              </p>
+            </div>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

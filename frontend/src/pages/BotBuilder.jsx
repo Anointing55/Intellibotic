@@ -1,456 +1,681 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
-import { motion } from 'framer-motion';
-import axios from 'axios';
-
+// src/pages/BotBuilder.jsx
+import React, { useState, useCallback, useRef } from 'react';
 import ReactFlow, {
+  ReactFlowProvider,
   addEdge,
   useNodesState,
   useEdgesState,
   Controls,
   Background,
   MiniMap,
-  Panel
+  Panel,
+  Handle,
+  Position
 } from 'reactflow';
-import { ReactFlowProvider } from 'reactflow';
-
-import 'reactflow/dist/style.css';
-import '@reactflow/node-resizer/dist/style.css';
-
-import {
+import { motion, AnimatePresence } from 'framer-motion';
+import { 
+  FiMessageSquare, 
+  FiCode, 
+  FiGitBranch, 
+  FiDatabase, 
+  FiPlus, 
+  FiChevronLeft,
   FiSave,
-  FiMessageSquare,
-  FiCode,
-  FiGitBranch,
-  FiChevronRight,
-  FiX,
-  FiPlus,
-  FiTrash2,
+  FiPlay,
   FiSettings,
-  FiPlay
+  FiTrash2,
+  FiX,
+  FiZap,
+  FiUser
 } from 'react-icons/fi';
+import { useNavigate, useParams } from 'react-router-dom';
+import 'reactflow/dist/style.css';
 
-// Custom Node Types
-const MessageNode = ({ data }) => (
-  <div className="px-4 py-2 shadow-md rounded-md bg-white border-2 border-primary">
-    <div className="flex items-center">
-      <FiMessageSquare className="mr-2 text-primary" />
-      <div className="text-xs font-bold text-primary">Message</div>
-    </div>
-    <div className="mt-1 text-sm">{data.label || 'Send message'}</div>
-  </div>
-);
+// Custom Node Components
+const MessageNode = ({ data }) => {
+  return (
+    <motion.div 
+      className="px-4 py-3 shadow-md rounded-lg bg-white border border-blue-200 w-64"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      <div className="flex items-center mb-2">
+        <div className="rounded-full bg-blue-100 p-2 mr-2">
+          <FiMessageSquare className="text-blue-600" />
+        </div>
+        <div className="font-medium text-gray-900">Send Message</div>
+      </div>
+      <div className="text-sm text-gray-600 truncate">
+        {data.label || "Type your message here..."}
+      </div>
+      <Handle type="target" position={Position.Top} className="w-2 h-2 bg-blue-500" />
+      <Handle type="source" position={Position.Bottom} className="w-2 h-2 bg-blue-500" />
+    </motion.div>
+  );
+};
 
-const ConditionNode = ({ data }) => (
-  <div className="px-4 py-2 shadow-md rounded-md bg-white border-2 border-secondary">
-    <div className="flex items-center">
-      <FiGitBranch className="mr-2 text-secondary" />
-      <div className="text-xs font-bold text-secondary">Condition</div>
-    </div>
-    <div className="mt-1 text-sm">{data.label || 'Check condition'}</div>
-  </div>
-);
+const ConditionNode = ({ data }) => {
+  return (
+    <motion.div 
+      className="px-4 py-3 shadow-md rounded-lg bg-white border border-purple-200 w-64"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      <div className="flex items-center mb-2">
+        <div className="rounded-full bg-purple-100 p-2 mr-2">
+          <FiGitBranch className="text-purple-600" />
+        </div>
+        <div className="font-medium text-gray-900">Condition</div>
+      </div>
+      <div className="text-sm text-gray-600 truncate">
+        {data.label || "Add condition..."}
+      </div>
+      <Handle type="target" position={Position.Top} className="w-2 h-2 bg-purple-500" />
+      <Handle 
+        type="source" 
+        position={Position.Bottom} 
+        id="true" 
+        className="w-2 h-2 bg-green-500"
+        style={{ left: '25%' }}
+      />
+      <Handle 
+        type="source" 
+        position={Position.Bottom} 
+        id="false" 
+        className="w-2 h-2 bg-red-500"
+        style={{ left: '75%' }}
+      />
+    </motion.div>
+  );
+};
 
-const CodeNode = ({ data }) => (
-  <div className="px-4 py-2 shadow-md rounded-md bg-white border-2 border-accent">
-    <div className="flex items-center">
-      <FiCode className="mr-2 text-accent" />
-      <div className="text-xs font-bold text-accent">Code</div>
-    </div>
-    <div className="mt-1 text-sm">{data.label || 'Run code'}</div>
-  </div>
-);
+const CodeNode = ({ data }) => {
+  return (
+    <motion.div 
+      className="px-4 py-3 shadow-md rounded-lg bg-white border border-yellow-200 w-64"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      <div className="flex items-center mb-2">
+        <div className="rounded-full bg-yellow-100 p-2 mr-2">
+          <FiCode className="text-yellow-600" />
+        </div>
+        <div className="font-medium text-gray-900">Execute Code</div>
+      </div>
+      <div className="text-sm text-gray-600 truncate">
+        {data.label || "Write your code..."}
+      </div>
+      <Handle type="target" position={Position.Top} className="w-2 h-2 bg-yellow-500" />
+      <Handle type="source" position={Position.Bottom} className="w-2 h-2 bg-yellow-500" />
+    </motion.div>
+  );
+};
 
+const StartNode = () => {
+  return (
+    <motion.div 
+      className="px-4 py-3 shadow-md rounded-lg bg-white border-2 border-green-500 w-48"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      <div className="flex items-center justify-center">
+        <div className="rounded-full bg-green-100 p-2 mr-2">
+          <FiZap className="text-green-600" />
+        </div>
+        <div className="font-medium text-gray-900">Start</div>
+      </div>
+      <Handle type="source" position={Position.Bottom} className="w-2 h-2 bg-green-500" />
+    </motion.div>
+  );
+};
+
+const UserInputNode = ({ data }) => {
+  return (
+    <motion.div 
+      className="px-4 py-3 shadow-md rounded-lg bg-white border border-indigo-200 w-64"
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+    >
+      <div className="flex items-center mb-2">
+        <div className="rounded-full bg-indigo-100 p-2 mr-2">
+          <FiUser className="text-indigo-600" />
+        </div>
+        <div className="font-medium text-gray-900">User Input</div>
+      </div>
+      <div className="text-sm text-gray-600 truncate">
+        {data.label || "What should users say?"}
+      </div>
+      <Handle type="target" position={Position.Top} className="w-2 h-2 bg-indigo-500" />
+      <Handle type="source" position={Position.Bottom} className="w-2 h-2 bg-indigo-500" />
+    </motion.div>
+  );
+};
+
+// Node types
 const nodeTypes = {
   message: MessageNode,
   condition: ConditionNode,
-  code: CodeNode
+  code: CodeNode,
+  start: StartNode,
+  userInput: UserInputNode
 };
 
 const BotBuilder = () => {
   const { botId } = useParams();
   const navigate = useNavigate();
-  const [botName, setBotName] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSaving, setIsSaving] = useState(false);
-  const [showSidebar, setShowSidebar] = useState(true);
-  const [selectedNode, setSelectedNode] = useState(null);
-  
-  // React Flow state
+  const reactFlowWrapper = useRef(null);
   const [nodes, setNodes, onNodesChange] = useNodesState([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-  
-  // Fetch bot data
-  useEffect(() => {
-    const fetchBot = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`/api/bots/${botId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        setBotName(response.data.name);
-        
-        // Initialize nodes and edges from bot config
-        if (response.data.config?.nodes) {
-          setNodes(response.data.config.nodes);
-        }
-        if (response.data.config?.edges) {
-          setEdges(response.data.config.edges);
-        }
-      } catch (error) {
-        console.error('Error fetching bot:', error);
-      } finally {
-        setIsLoading(false);
+  const [reactFlowInstance, setReactFlowInstance] = useState(null);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveSuccess, setSaveSuccess] = useState(false);
+
+  // Initialize with some nodes
+  useState(() => {
+    setNodes([
+      {
+        id: '1',
+        type: 'start',
+        position: { x: 250, y: 50 },
+        data: { label: 'Start' }
+      },
+      {
+        id: '2',
+        type: 'userInput',
+        position: { x: 250, y: 150 },
+        data: { label: 'What can I help you with?' }
+      },
+      {
+        id: '3',
+        type: 'condition',
+        position: { x: 250, y: 250 },
+        data: { label: 'Is it urgent?' }
+      },
+      {
+        id: '4',
+        type: 'message',
+        position: { x: 100, y: 350 },
+        data: { label: 'Please contact support immediately' }
+      },
+      {
+        id: '5',
+        type: 'message',
+        position: { x: 400, y: 350 },
+        data: { label: 'I can help with that!' }
       }
-    };
-    
-    fetchBot();
-  }, [botId]);
-  
-  // Save bot configuration
-  const saveBot = async () => {
-    setIsSaving(true);
-    try {
-      const token = localStorage.getItem('token');
-      await axios.put(`/api/bots/${botId}`, {
-        config: { nodes, edges }
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Show success feedback
-      setIsSaving(false);
-      return true;
-    } catch (error) {
-      console.error('Error saving bot:', error);
-      setIsSaving(false);
-      return false;
-    }
-  };
-  
-  // Handle node drag from sidebar
-  const onDragStart = (event, nodeType) => {
-    event.dataTransfer.setData('application/reactflow', nodeType);
-    event.dataTransfer.effectAllowed = 'move';
-  };
-  
-  // Handle node drop on canvas
-  const onDrop = useCallback((event) => {
+    ]);
+
+    setEdges([
+      { id: 'e1-2', source: '1', target: '2', animated: true },
+      { id: 'e2-3', source: '2', target: '3', animated: true },
+      { id: 'e3-4', source: '3', target: '4', sourceHandle: 'true' },
+      { id: 'e3-5', source: '3', target: '5', sourceHandle: 'false' }
+    ]);
+  }, []);
+
+  const onConnect = useCallback(
+    (params) => setEdges((eds) => addEdge(params, eds)),
+    [setEdges]
+  );
+
+  const onDragOver = useCallback((event) => {
     event.preventDefault();
-    
-    const type = event.dataTransfer.getData('application/reactflow');
-    const position = { x: event.clientX, y: event.clientY };
-    
-    // Create new node
-    const newNode = {
-      id: `node-${Date.now()}`,
-      type,
-      position,
-      data: { 
-        label: `${type.charAt(0).toUpperCase() + type.slice(1)} Node`,
-        content: ''
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const onDrop = useCallback(
+    (event) => {
+      event.preventDefault();
+
+      const reactFlowBounds = reactFlowWrapper.current.getBoundingClientRect();
+      const type = event.dataTransfer.getData('application/reactflow');
+      const label = event.dataTransfer.getData('text/plain');
+
+      // Check if the dropped element is valid
+      if (typeof type === 'undefined' || !type) {
+        return;
       }
-    };
+
+      const position = reactFlowInstance.project({
+        x: event.clientX - reactFlowBounds.left,
+        y: event.clientY - reactFlowBounds.top,
+      });
+
+      const newNode = {
+        id: `${Date.now()}`,
+        type,
+        position,
+        data: { label },
+      };
+
+      setNodes((nds) => nds.concat(newNode));
+    },
+    [reactFlowInstance, setNodes]
+  );
+
+  const handleSave = () => {
+    setIsSaving(true);
     
-    setNodes((nds) => nds.concat(newNode));
-  }, [setNodes]);
-  
-  // Handle edge creation
-  const onConnect = useCallback((params) => {
-    setEdges((eds) => addEdge(params, eds));
-  }, [setEdges]);
-  
-  // Delete selected node
-  const deleteSelectedNode = () => {
-    if (!selectedNode) return;
-    
-    setNodes((nds) => nds.filter(node => node.id !== selectedNode.id));
-    setEdges((eds) => eds.filter(edge => 
-      edge.source !== selectedNode.id && edge.target !== selectedNode.id
-    ));
-    setSelectedNode(null);
+    // Simulate API save
+    setTimeout(() => {
+      setIsSaving(false);
+      setSaveSuccess(true);
+      
+      // Reset success message after 2 seconds
+      setTimeout(() => setSaveSuccess(false), 2000);
+    }, 1500);
   };
-  
-  // Node click handler
+
+  const handleTestBot = () => {
+    navigate(`/chat/${botId}`);
+  };
+
   const handleNodeClick = (event, node) => {
     setSelectedNode(node);
   };
-  
-  // Close sidebar when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (showSidebar && !event.target.closest('.node-sidebar') && !event.target.closest('.sidebar-toggle')) {
-        setShowSidebar(false);
-      }
-    };
-    
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [showSidebar]);
-  
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="h-16 w-16 border-4 border-primary border-t-transparent rounded-full"
-        />
-      </div>
+
+  const closeNodeEditor = () => {
+    setSelectedNode(null);
+  };
+
+  const updateNodeData = (newData) => {
+    setNodes((nds) =>
+      nds.map((node) => {
+        if (node.id === selectedNode.id) {
+          return {
+            ...node,
+            data: {
+              ...node.data,
+              ...newData
+            }
+          };
+        }
+        return node;
+      })
     );
-  }
+  };
+
+  const nodeTypesList = [
+    { id: 'message', icon: <FiMessageSquare />, name: 'Message', color: 'blue' },
+    { id: 'userInput', icon: <FiUser />, name: 'User Input', color: 'indigo' },
+    { id: 'condition', icon: <FiGitBranch />, name: 'Condition', color: 'purple' },
+    { id: 'code', icon: <FiCode />, name: 'Execute Code', color: 'yellow' },
+    { id: 'database', icon: <FiDatabase />, name: 'Database', color: 'green' }
+  ];
 
   return (
-    <div className="flex h-screen bg-gray-50 overflow-hidden">
-      {/* Sidebar Toggle */}
-      <motion.button
-        whileHover={{ x: showSidebar ? 0 : 5 }}
-        whileTap={{ scale: 0.95 }}
-        className={`absolute top-4 left-4 z-10 p-2 rounded-full bg-white shadow-lg sidebar-toggle ${
-          showSidebar ? 'text-primary' : 'text-gray-600'
-        }`}
-        onClick={() => setShowSidebar(!showSidebar)}
-      >
-        <FiChevronRight
-          className={`transition-transform ${showSidebar ? 'rotate-180' : ''}`}
-          size={20}
-        />
-      </motion.button>
-
-      {/* Node Sidebar */}
-      <motion.div
-        initial={{ x: -300 }}
-        animate={{ x: showSidebar ? 0 : -300 }}
-        transition={{ type: 'spring', damping: 25 }}
-        className="absolute md:relative z-20 h-full w-64 bg-white shadow-xl node-sidebar"
-      >
-        <div className="p-4 border-b border-gray-200">
-          <h2 className="text-lg font-bold text-gray-800">Bot Builder</h2>
-          <p className="text-sm text-gray-600 truncate">{botName}</p>
-        </div>
-        
-        <div className="p-4">
-          <h3 className="text-sm font-semibold text-gray-700 mb-3">Add Nodes</h3>
-          
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="mb-3"
-          >
-            <div
-              draggable
-              onDragStart={(event) => onDragStart(event, 'message')}
-              className="flex items-center p-3 bg-primary/10 border border-primary/30 rounded-lg cursor-grab"
-            >
-              <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center mr-3">
-                <FiMessageSquare className="text-primary" />
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="flex h-screen bg-gray-50"
+    >
+      <ReactFlowProvider>
+        {/* Sidebar */}
+        <motion.div
+          animate={{ width: isSidebarOpen ? '280px' : '0px' }}
+          className={`h-full bg-white shadow-lg z-10 overflow-hidden ${isSidebarOpen ? 'border-r border-gray-200' : ''}`}
+        >
+          <div className="h-full flex flex-col" style={{ minWidth: '280px' }}>
+            <div className="p-4 border-b border-gray-200">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Node Library</h2>
+                <motion.button
+                  whileHover={{ rotate: 90 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setIsSidebarOpen(false)}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <FiX size={18} />
+                </motion.button>
               </div>
-              <div>
-                <div className="font-medium text-gray-800">Message</div>
-                <div className="text-xs text-gray-500">Send a message to user</div>
+              
+              <div className="relative">
+                <input
+                  type="text"
+                  placeholder="Search nodes..."
+                  className="w-full pl-9 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+                <FiSearch className="absolute left-3 top-2.5 text-gray-400" />
               </div>
             </div>
-          </motion.div>
-          
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-            className="mb-3"
-          >
-            <div
-              draggable
-              onDragStart={(event) => onDragStart(event, 'condition')}
-              className="flex items-center p-3 bg-secondary/10 border border-secondary/30 rounded-lg cursor-grab"
-            >
-              <div className="w-8 h-8 rounded-full bg-secondary/20 flex items-center justify-center mr-3">
-                <FiGitBranch className="text-secondary" />
+            
+            <div className="flex-1 overflow-y-auto p-4">
+              <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Core Nodes</h3>
+              
+              <div className="space-y-3">
+                {nodeTypesList.map((nodeType) => (
+                  <motion.div
+                    key={nodeType.id}
+                    className="group"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    draggable
+                    onDragStart={(event) => {
+                      event.dataTransfer.setData('application/reactflow', nodeType.id);
+                      event.dataTransfer.setData('text/plain', nodeType.name);
+                      event.dataTransfer.effectAllowed = 'move';
+                    }}
+                  >
+                    <div className={`flex items-center p-3 rounded-lg border cursor-pointer bg-white shadow-sm border-${nodeType.color}-200 group-hover:border-${nodeType.color}-300 transition-colors`}>
+                      <div className={`rounded-lg p-2 mr-3 bg-${nodeType.color}-100 text-${nodeType.color}-600`}>
+                        {nodeType.icon}
+                      </div>
+                      <div>
+                        <div className="font-medium text-gray-900">{nodeType.name}</div>
+                        <div className="text-xs text-gray-500">Drag to canvas</div>
+                      </div>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
-              <div>
-                <div className="font-medium text-gray-800">Condition</div>
-                <div className="text-xs text-gray-500">Branch based on conditions</div>
+              
+              <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mt-6 mb-3">AI Nodes</h3>
+              
+              <div className="space-y-3">
+                <motion.div
+                  className="group"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex items-center p-3 rounded-lg border cursor-pointer bg-white shadow-sm border-blue-200 group-hover:border-blue-300">
+                    <div className="rounded-lg p-2 mr-3 bg-blue-100 text-blue-600">
+                      <FiMessageSquare />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">AI Response</div>
+                      <div className="text-xs text-gray-500">Generate with AI</div>
+                    </div>
+                  </div>
+                </motion.div>
+                
+                <motion.div
+                  className="group"
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                >
+                  <div className="flex items-center p-3 rounded-lg border cursor-pointer bg-white shadow-sm border-purple-200 group-hover:border-purple-300">
+                    <div className="rounded-lg p-2 mr-3 bg-purple-100 text-purple-600">
+                      <FiGitBranch />
+                    </div>
+                    <div>
+                      <div className="font-medium text-gray-900">AI Condition</div>
+                      <div className="text-xs text-gray-500">Conditional AI logic</div>
+                    </div>
+                  </div>
+                </motion.div>
               </div>
             </div>
-          </motion.div>
-          
-          <motion.div
-            whileHover={{ scale: 1.02 }}
-          >
-            <div
-              draggable
-              onDragStart={(event) => onDragStart(event, 'code')}
-              className="flex items-center p-3 bg-accent/10 border border-accent/30 rounded-lg cursor-grab"
-            >
-              <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center mr-3">
-                <FiCode className="text-accent" />
-              </div>
-              <div>
-                <div className="font-medium text-gray-800">Code</div>
-                <div className="text-xs text-gray-500">Run custom JavaScript</div>
-              </div>
-            </div>
-          </motion.div>
-        </div>
-        
-        {selectedNode && (
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="p-4 border-t border-gray-200"
-          >
-            <div className="flex justify-between items-center mb-3">
-              <h3 className="font-medium text-gray-800">Node Settings</h3>
-              <button 
-                onClick={() => setSelectedNode(null)}
-                className="p-1 rounded-full hover:bg-gray-100"
+            
+            <div className="p-4 border-t border-gray-200">
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="w-full flex items-center justify-center px-4 py-2.5 bg-blue-600 text-white font-medium rounded-lg"
               >
-                <FiX size={16} />
-              </button>
+                <FiPlus className="mr-2" />
+                Add Custom Node
+              </motion.button>
+            </div>
+          </div>
+        </motion.div>
+        
+        {/* Main Canvas Area */}
+        <div className="flex-1 h-full flex flex-col" ref={reactFlowWrapper}>
+          <div className="h-16 bg-white border-b border-gray-200 flex items-center px-6 justify-between">
+            <div className="flex items-center">
+              {!isSidebarOpen && (
+                <motion.button
+                  whileHover={{ scale: 1.1 }}
+                  whileTap={{ scale: 0.9 }}
+                  onClick={() => setIsSidebarOpen(true)}
+                  className="mr-4 text-gray-500 hover:text-gray-700"
+                >
+                  <FiChevronLeft size={20} />
+                </motion.button>
+              )}
+              
+              <div>
+                <h1 className="font-semibold text-gray-900">Customer Support Bot</h1>
+                <p className="text-sm text-gray-500">Bot ID: {botId}</p>
+              </div>
             </div>
             
-            <div className="mb-3">
-              <label className="block text-sm text-gray-700 mb-1">Label</label>
-              <input
-                type="text"
-                value={selectedNode.data.label}
-                onChange={(e) => {
-                  setNodes((nds) => nds.map((node) => 
-                    node.id === selectedNode.id 
-                      ? { ...node, data: { ...node.data, label: e.target.value } } 
-                      : node
-                  ));
-                  setSelectedNode({
-                    ...selectedNode,
-                    data: { ...selectedNode.data, label: e.target.value }
-                  });
-                }}
-                className="input-field"
-              />
+            <div className="flex items-center space-x-3">
+              <AnimatePresence>
+                {saveSuccess && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    className="px-3 py-1.5 bg-green-100 text-green-800 text-sm rounded-lg flex items-center"
+                  >
+                    <FiSave className="mr-1.5" /> Saved successfully!
+                  </motion.div>
+                )}
+              </AnimatePresence>
+              
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleTestBot}
+                className="px-4 py-2 bg-emerald-500 text-white font-medium rounded-lg flex items-center"
+              >
+                <FiPlay className="mr-2" /> Test Bot
+              </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: 1.05 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={handleSave}
+                disabled={isSaving}
+                className={`px-4 py-2 bg-blue-600 text-white font-medium rounded-lg flex items-center ${
+                  isSaving ? 'opacity-75 cursor-not-allowed' : ''
+                }`}
+              >
+                {isSaving ? (
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+                    className="h-4 w-4 border-2 border-white border-t-transparent rounded-full mr-2"
+                  />
+                ) : (
+                  <FiSave className="mr-2" />
+                )}
+                Save
+              </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg"
+              >
+                <FiSettings size={18} />
+              </motion.button>
             </div>
-            
-            <div className="mb-3">
-              <label className="block text-sm text-gray-700 mb-1">Content</label>
-              <textarea
-                rows={3}
-                value={selectedNode.data.content || ''}
-                onChange={(e) => {
-                  setNodes((nds) => nds.map((node) => 
-                    node.id === selectedNode.id 
-                      ? { ...node, data: { ...node.data, content: e.target.value } } 
-                      : node
-                  ));
-                  setSelectedNode({
-                    ...selectedNode,
-                    data: { ...selectedNode.data, content: e.target.value }
-                  });
-                }}
-                className="input-field"
-              />
-            </div>
-            
-            <motion.button
-              whileHover={{ scale: 1.03 }}
-              whileTap={{ scale: 0.97 }}
-              onClick={deleteSelectedNode}
-              className="w-full flex items-center justify-center py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg"
-            >
-              <FiTrash2 className="mr-2" />
-              Delete Node
-            </motion.button>
-          </motion.div>
-        )}
-      </motion.div>
-
-      {/* Main Flow Area */}
-      <div className="flex-1 h-full">
-        <ReactFlowProvider>
+          </div>
+          
           <ReactFlow
             nodes={nodes}
             edges={edges}
             onNodesChange={onNodesChange}
             onEdgesChange={onEdgesChange}
             onConnect={onConnect}
+            onInit={setReactFlowInstance}
             onDrop={onDrop}
-            onDragOver={(e) => e.preventDefault()}
-            onNodeClick={handleNodeClick}
+            onDragOver={onDragOver}
             nodeTypes={nodeTypes}
+            onNodeClick={handleNodeClick}
             fitView
+            className="bg-gray-50"
           >
-            <Background color="#aaa" gap={16} />
-            <Controls />
-            <MiniMap />
+            <Controls className="bg-white shadow-md rounded-lg border border-gray-200" />
+            <MiniMap 
+              className="bg-white shadow-md rounded-lg border border-gray-200" 
+              nodeColor={(node) => {
+                switch (node.type) {
+                  case 'start': return '#10B981';
+                  case 'condition': return '#8B5CF6';
+                  case 'code': return '#F59E0B';
+                  case 'userInput': return '#6366F1';
+                  default: return '#3B82F6';
+                }
+              }}
+            />
+            <Background color="#aaa" gap={20} />
             
-            {/* Top Panel */}
-            <Panel position="top-right" className="bg-white/80 backdrop-blur-sm rounded-lg shadow-md p-3">
-              <div className="flex items-center space-x-3">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={saveBot}
-                  className="flex items-center bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg"
-                >
-                  {isSaving ? (
-                    <motion.span
-                      animate={{ rotate: 360 }}
-                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                      className="h-5 w-5 border-2 border-white border-t-transparent rounded-full"
-                    />
-                  ) : (
-                    <>
-                      <FiSave className="mr-2" />
-                      Save
-                    </>
-                  )}
-                </motion.button>
-                
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate(`/chat/${botId}`)}
-                  className="flex items-center bg-secondary hover:bg-secondary/90 text-white px-4 py-2 rounded-lg"
-                >
-                  <FiPlay className="mr-2" />
-                  Test Chat
-                </motion.button>
-                
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => navigate(`/settings?botId=${botId}`)}
-                  className="flex items-center bg-gray-200 hover:bg-gray-300 text-gray-700 px-4 py-2 rounded-lg"
-                >
-                  <FiSettings className="mr-2" />
-                  Settings
-                </motion.button>
-              </div>
-            </Panel>
-            
-            {/* Help Panel */}
-            <Panel position="bottom-left" className="bg-white/80 backdrop-blur-sm rounded-lg shadow-md p-3 text-sm">
-              <div className="flex items-center">
-                <div className="mr-3">
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-primary mr-1"></div>
-                    <span className="mr-3">Message</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-secondary mr-1"></div>
-                    <span className="mr-3">Condition</span>
-                  </div>
-                  <div className="flex items-center">
-                    <div className="w-3 h-3 rounded-full bg-accent mr-1"></div>
-                    <span>Code</span>
-                  </div>
-                </div>
-                <div>
-                  <p>Drag nodes from sidebar • Click to select • Connect nodes</p>
-                </div>
+            <Panel position="top-right" className="bg-white shadow-md rounded-lg p-2">
+              <div className="text-sm font-medium text-gray-700">
+                {nodes.length} nodes • {edges.length} connections
               </div>
             </Panel>
           </ReactFlow>
-        </ReactFlowProvider>
-      </div>
-    </div>
+        </div>
+        
+        {/* Node Editor Panel */}
+        <AnimatePresence>
+          {selectedNode && (
+            <motion.div
+              initial={{ opacity: 0, x: 300 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 300 }}
+              className="absolute right-6 top-24 w-96 bg-white rounded-xl shadow-xl border border-gray-200 z-20"
+            >
+              <div className="p-5 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Edit {selectedNode.type === 'message' ? 'Message' : 
+                          selectedNode.type === 'condition' ? 'Condition' : 
+                          selectedNode.type === 'code' ? 'Code' : 
+                          selectedNode.type === 'userInput' ? 'User Input' : 'Node'}
+                  </h2>
+                  <motion.button
+                    whileHover={{ rotate: 90 }}
+                    whileTap={{ scale: 0.9 }}
+                    onClick={closeNodeEditor}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    <FiX size={20} />
+                  </motion.button>
+                </div>
+              </div>
+              
+              <div className="p-5">
+                {selectedNode.type === 'message' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Message Content
+                    </label>
+                    <textarea
+                      value={selectedNode.data.label}
+                      onChange={(e) => updateNodeData({ label: e.target.value })}
+                      className="w-full h-32 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      placeholder="Type your message here..."
+                    />
+                    
+                    <div className="mt-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Buttons (Optional)
+                      </label>
+                      <div className="space-y-2">
+                        <div className="flex items-center">
+                          <input
+                            type="text"
+                            placeholder="Button text"
+                            className="flex-1 p-2 border border-gray-300 rounded-l-lg"
+                          />
+                          <button className="px-3 py-2 bg-gray-100 border border-gray-300 rounded-r-lg text-gray-600 hover:bg-gray-200">
+                            <FiPlus />
+                          </button>
+                        </div>
+                        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 text-sm">
+                          <div className="flex justify-between">
+                            <span>Contact Support</span>
+                            <button className="text-red-500 hover:text-red-700">
+                              <FiTrash2 size={14} />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {selectedNode.type === 'condition' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Condition Expression
+                    </label>
+                    <input
+                      value={selectedNode.data.label}
+                      onChange={(e) => updateNodeData({ label: e.target.value })}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono"
+                      placeholder="e.g., user.plan === 'premium'"
+                    />
+                    
+                    <div className="mt-4 grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          True Branch Label
+                        </label>
+                        <input
+                          value="Yes"
+                          className="w-full p-2 border border-gray-300 rounded-lg"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          False Branch Label
+                        </label>
+                        <input
+                          value="No"
+                          className="w-full p-2 border border-gray-300 rounded-lg"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {selectedNode.type === 'code' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      JavaScript Code
+                    </label>
+                    <textarea
+                      value={selectedNode.data.label}
+                      onChange={(e) => updateNodeData({ label: e.target.value })}
+                      className="w-full h-48 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent font-mono text-sm"
+                      placeholder="// Write your code here..."
+                    />
+                  </div>
+                )}
+                
+                <div className="mt-6 flex justify-end space-x-3">
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={closeNodeEditor}
+                    className="px-4 py-2 border border-gray-300 text-gray-700 font-medium rounded-lg"
+                  >
+                    Cancel
+                  </motion.button>
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.97 }}
+                    onClick={closeNodeEditor}
+                    className="px-4 py-2 bg-blue-600 text-white font-medium rounded-lg"
+                  >
+                    Save Changes
+                  </motion.button>
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </ReactFlowProvider>
+    </motion.div>
   );
 };
 

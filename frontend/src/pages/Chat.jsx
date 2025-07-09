@@ -1,134 +1,89 @@
-// frontend/src/pages/Chat.jsx
+// src/pages/Chat.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import axios from 'axios';
-import { FiSend, FiArrowLeft, FiLoader, FiTrash2, FiMessageSquare } from 'react-icons/fi';
+import { 
+  FiSend, 
+  FiArrowLeft, 
+  FiSettings, 
+  FiRefreshCw,
+  FiTrash2,
+  FiUser,
+  FiZap
+} from 'react-icons/fi';
+import { useNavigate, useParams } from 'react-router-dom';
 
 const Chat = () => {
   const { botId } = useParams();
   const navigate = useNavigate();
-  const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState('');
-  const [isSending, setIsSending] = useState(false);
-  const [botName, setBotName] = useState('ChatBot');
-  const [botAvatar, setBotAvatar] = useState('');
   const messagesEndRef = useRef(null);
-
-  // Fetch bot details
-  useEffect(() => {
-    const fetchBotDetails = async () => {
-      try {
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`/api/bots/${botId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        setBotName(response.data.name);
-        setBotAvatar(response.data.config?.avatar || '');
-      } catch (error) {
-        console.error('Error fetching bot details:', error);
-      }
-    };
-    
-    fetchBotDetails();
-  }, [botId]);
+  const [message, setMessage] = useState('');
+  const [isTyping, setIsTyping] = useState(false);
+  const [isClearing, setIsClearing] = useState(false);
+  const [chatHistory, setChatHistory] = useState([
+    { id: 1, text: "Hello! I'm your customer support bot. How can I help you today?", sender: 'bot', timestamp: new Date(Date.now() - 300000) },
+    { id: 2, text: "I'm having trouble with my account login", sender: 'user', timestamp: new Date(Date.now() - 240000) },
+    { id: 3, text: "I'm sorry to hear that. Could you please tell me your email address associated with the account?", sender: 'bot', timestamp: new Date(Date.now() - 180000) },
+    { id: 4, text: "example@email.com", sender: 'user', timestamp: new Date(Date.now() - 120000) },
+    { id: 5, text: "Thank you! I see the issue. Your account requires verification. Would you like me to resend the verification email?", sender: 'bot', timestamp: new Date(Date.now() - 60000) },
+  ]);
+  
+  const botNames = {
+    '1': 'Customer Support Bot',
+    '2': 'Sales Assistant',
+    '3': 'HR Onboarding',
+    '4': 'IT Helpdesk'
+  };
+  
+  const botName = botNames[botId] || 'Intellibotic Assistant';
 
   // Scroll to bottom when messages change
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
+  }, [chatHistory]);
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
-  // Handle sending a message
-  const handleSendMessage = async () => {
-    if (!inputText.trim() || isSending) return;
-    
+  const handleSendMessage = () => {
+    if (!message.trim()) return;
+
     // Add user message
-    const userMessage = {
-      id: Date.now(),
-      text: inputText,
+    const newUserMessage = {
+      id: chatHistory.length + 1,
+      text: message,
       sender: 'user',
-      timestamp: new Date(),
+      timestamp: new Date()
     };
     
-    setMessages(prev => [...prev, userMessage]);
-    setInputText('');
-    setIsSending(true);
+    setChatHistory(prev => [...prev, newUserMessage]);
+    setMessage('');
     
-    try {
-      // In a real app, this would call the bot's API
-      // For now, simulate a response with a delay
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    // Simulate bot typing
+    setIsTyping(true);
+    
+    // Simulate bot response after delay
+    setTimeout(() => {
+      const responses = [
+        "I understand your concern. Let me check that for you.",
+        "Thanks for providing that information. Here's what I found...",
+        "That's a great question! Based on your account details...",
+        "I can definitely help with that. Here are my recommendations...",
+        "I've processed your request. The next step would be..."
+      ];
       
-      // Generate bot response
       const botResponse = {
-        id: Date.now() + 1,
-        text: generateBotResponse(inputText),
+        id: chatHistory.length + 2,
+        text: responses[Math.floor(Math.random() * responses.length)],
         sender: 'bot',
-        timestamp: new Date(),
+        timestamp: new Date()
       };
       
-      setMessages(prev => [...prev, botResponse]);
-    } catch (error) {
-      console.error('Error getting bot response:', error);
-      
-      const errorResponse = {
-        id: Date.now() + 1,
-        text: "I'm having trouble responding right now. Please try again later.",
-        sender: 'bot',
-        timestamp: new Date(),
-      };
-      
-      setMessages(prev => [...prev, errorResponse]);
-    } finally {
-      setIsSending(false);
-    }
+      setChatHistory(prev => [...prev, botResponse]);
+      setIsTyping(false);
+    }, 2000);
   };
 
-  // Simple bot response generation
-  const generateBotResponse = (input) => {
-    const inputLower = input.toLowerCase();
-    
-    if (inputLower.includes('hello') || inputLower.includes('hi')) {
-      return "Hello there! How can I assist you today?";
-    }
-    
-    if (inputLower.includes('how are you')) {
-      return "I'm just a bot, but I'm functioning perfectly! How can I help you?";
-    }
-    
-    if (inputLower.includes('thank')) {
-      return "You're welcome! Is there anything else I can help with?";
-    }
-    
-    if (inputLower.includes('bye') || inputLower.includes('goodbye')) {
-      return "Goodbye! Feel free to chat again anytime.";
-    }
-    
-    const responses = [
-      "That's interesting! Can you tell me more?",
-      "I understand. How else can I assist you?",
-      "Thanks for sharing that information.",
-      "I'm here to help with any questions you have.",
-      "Could you clarify that for me?",
-      "I'm still learning, but I'll do my best to help!",
-      "That's a great point. What would you like to do next?",
-      "I've noted your input. Is there anything specific you need help with?"
-    ];
-    
-    return responses[Math.floor(Math.random() * responses.length)];
-  };
-
-  // Clear chat history
-  const clearChat = () => {
-    setMessages([]);
-  };
-
-  // Handle Enter key press
   const handleKeyPress = (e) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -136,181 +91,309 @@ const Chat = () => {
     }
   };
 
+  const clearChat = () => {
+    setIsClearing(true);
+    
+    // Animation while clearing
+    setTimeout(() => {
+      setChatHistory([]);
+      setIsClearing(false);
+    }, 500);
+  };
+
+  const formatTime = (date) => {
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  // Animation variants
+  const messageVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: i * 0.05,
+        duration: 0.3,
+        ease: "easeOut"
+      }
+    }),
+    exit: { opacity: 0, x: -50 }
+  };
+
+  const typingVariants = {
+    hidden: { opacity: 0 },
+    visible: { 
+      opacity: 1,
+      transition: { staggerChildren: 0.2 } 
+    }
+  };
+
+  const dotVariants = {
+    hidden: { opacity: 0.2, y: 0 },
+    visible: { 
+      opacity: 1, 
+      y: -5,
+      transition: { 
+        yoyo: Infinity,
+        duration: 0.6,
+        ease: "easeInOut"
+      } 
+    }
+  };
+
   return (
-    <div className="flex flex-col h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <motion.div 
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: 0.5 }}
+      className="flex flex-col h-screen bg-gradient-to-b from-blue-50 to-gray-100"
+    >
       {/* Chat Header */}
-      <motion.div
-        initial={{ y: -20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
+      <motion.div 
+        initial={{ y: -20 }}
+        animate={{ y: 0 }}
         className="bg-white shadow-sm py-4 px-6 flex items-center justify-between"
       >
         <div className="flex items-center">
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => navigate(-1)}
-            className="flex items-center text-gray-600 hover:text-gray-800 mr-4"
+            onClick={() => navigate('/dashboard')}
+            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100 mr-4"
           >
-            <FiArrowLeft className="mr-1" />
-            Back
+            <FiArrowLeft size={20} />
           </motion.button>
           
           <div className="flex items-center">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white font-bold mr-3">
-              {botAvatar ? (
-                <img 
-                  src={botAvatar} 
-                  alt={botName} 
-                  className="w-10 h-10 rounded-full object-cover"
-                />
-              ) : (
-                <FiMessageSquare size={20} />
-              )}
+            <div className="bg-blue-100 text-blue-600 p-2 rounded-lg mr-3">
+              <FiZap size={20} />
             </div>
             <div>
-              <h1 className="font-semibold text-gray-800">{botName}</h1>
-              <p className="text-xs text-gray-500">Testing Mode</p>
+              <h1 className="font-semibold text-gray-900">{botName}</h1>
+              <p className="text-sm text-gray-500">Testing in real-time</p>
             </div>
           </div>
         </div>
         
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={clearChat}
-          className="flex items-center text-red-500 hover:text-red-600"
-        >
-          <FiTrash2 className="mr-1" />
-          Clear Chat
-        </motion.button>
-      </motion.div>
-
-      {/* Messages Container */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 pb-20">
-        <div className="max-w-3xl mx-auto">
-          <AnimatePresence>
-            {messages.length === 0 ? (
+        <div className="flex items-center space-x-2">
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={clearChat}
+            disabled={isClearing}
+            className={`p-2 rounded-lg text-gray-600 hover:bg-gray-100 ${
+              isClearing ? 'opacity-50 cursor-not-allowed' : ''
+            }`}
+          >
+            {isClearing ? (
               <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="flex flex-col items-center justify-center h-full text-center py-12"
+                animate={{ rotate: 360 }}
+                transition={{ duration: 0.8, repeat: Infinity, ease: "linear" }}
+                className="h-5 w-5"
               >
-                <div className="bg-gradient-to-r from-primary to-secondary p-4 rounded-full mb-6">
-                  <FiMessageSquare className="text-white text-4xl" />
-                </div>
-                <h2 className="text-2xl font-bold text-gray-800 mb-2">Start a Conversation</h2>
-                <p className="text-gray-600 max-w-md">
-                  Send a message to test {botName}. Try asking a question or saying hello!
-                </p>
+                <FiRefreshCw />
               </motion.div>
             ) : (
-              messages.map((message) => (
-                <motion.div
-                  key={message.id}
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, x: message.sender === 'user' ? 50 : -50 }}
-                  transition={{ duration: 0.3 }}
-                  className={`flex mb-6 ${message.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                >
-                  {message.sender === 'bot' && (
-                    <div className="mr-3 mt-1">
-                      <div className="w-8 h-8 rounded-full bg-gradient-to-r from-primary to-secondary flex items-center justify-center text-white">
-                        {botAvatar ? (
-                          <img 
-                            src={botAvatar} 
-                            alt={botName} 
-                            className="w-8 h-8 rounded-full object-cover"
-                          />
-                        ) : (
-                          <FiMessageSquare size={16} />
-                        )}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className={`max-w-[80%] md:max-w-[70%]`}>
-                    <motion.div
-                      whileHover={{ scale: 1.01 }}
-                      className={`rounded-2xl px-4 py-3 shadow-sm ${
-                        message.sender === 'user' 
-                          ? 'bg-primary text-white rounded-tr-none' 
-                          : 'bg-white border border-gray-200 rounded-tl-none'
-                      }`}
-                    >
-                      <p className="whitespace-pre-wrap">{message.text}</p>
-                      <div className={`text-xs mt-1 ${message.sender === 'user' ? 'text-white/70' : 'text-gray-500'}`}>
-                        {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </motion.div>
-                  </div>
-                  
-                  {message.sender === 'user' && (
-                    <div className="ml-3 mt-1">
-                      <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                        <span className="font-medium text-gray-700">U</span>
-                      </div>
-                    </div>
-                  )}
-                </motion.div>
-              ))
+              <FiTrash2 size={18} />
             )}
-          </AnimatePresence>
-          <div ref={messagesEndRef} />
+          </motion.button>
+          
+          <motion.button
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => navigate(`/builder/${botId}`)}
+            className="p-2 rounded-lg text-gray-600 hover:bg-gray-100"
+          >
+            <FiSettings size={18} />
+          </motion.button>
         </div>
-      </div>
-
-      {/* Input Area */}
-      <motion.div
-        initial={{ y: 20, opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        className="bg-white border-t border-gray-200 py-4 px-4"
-      >
-        <div className="max-w-3xl mx-auto flex">
-          <div className="flex-1 relative">
-            <textarea
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-              onKeyDown={handleKeyPress}
-              placeholder="Type your message..."
-              className="w-full px-4 py-3 pr-12 bg-gray-100 rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent border-none resize-none transition-all"
-              rows={1}
-              style={{ minHeight: '56px', maxHeight: '150px' }}
-            />
-            
-            <div className="absolute right-3 bottom-3 flex items-center">
-              {isSending && (
+      </motion.div>
+      
+      {/* Chat Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6">
+        <div className="max-w-3xl mx-auto">
+          <AnimatePresence>
+            {isClearing ? (
+              <motion.div
+                key="clearing"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0 }}
+                className="flex flex-col items-center justify-center h-full text-center py-20"
+              >
                 <motion.div
                   animate={{ rotate: 360 }}
                   transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                  className="h-5 w-5 border-2 border-primary border-t-transparent rounded-full mr-2"
-                />
-              )}
-              
-              <motion.button
-                whileHover={{ scale: 1.1 }}
-                whileTap={{ scale: 0.9 }}
-                onClick={handleSendMessage}
-                disabled={!inputText.trim() || isSending}
-                className={`p-2 rounded-full ${
-                  inputText.trim() && !isSending
-                    ? 'bg-primary text-white'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                <FiSend size={18} />
-              </motion.button>
-            </div>
+                  className="h-16 w-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-6"
+                >
+                  <FiRefreshCw size={24} />
+                </motion.div>
+                <h3 className="text-xl font-medium text-gray-900 mb-2">Clearing conversation</h3>
+                <p className="text-gray-600">Starting fresh in a moment...</p>
+              </motion.div>
+            ) : (
+              <>
+                {chatHistory.length === 0 ? (
+                  <motion.div
+                    key="empty-state"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-col items-center justify-center h-full text-center py-20"
+                  >
+                    <div className="bg-blue-100 text-blue-600 p-4 rounded-2xl mb-6">
+                      <FiZap size={36} />
+                    </div>
+                    <h3 className="text-2xl font-bold text-gray-900 mb-3">Test Your Chatbot</h3>
+                    <p className="text-gray-600 max-w-md mx-auto mb-6">
+                      Start a conversation with {botName} to test its responses. Type a message below to begin.
+                    </p>
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.97 }}
+                      onClick={() => setMessage("Hello!")}
+                      className="px-5 py-2.5 bg-blue-600 text-white font-medium rounded-lg"
+                    >
+                      Say Hello
+                    </motion.button>
+                  </motion.div>
+                ) : (
+                  <div className="space-y-4 pb-4">
+                    {chatHistory.map((msg, index) => (
+                      <motion.div
+                        key={msg.id}
+                        custom={index}
+                        variants={messageVariants}
+                        initial="hidden"
+                        animate="visible"
+                        exit="exit"
+                        className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                      >
+                        <div 
+                          className={`max-w-[85%] md:max-w-[75%] lg:max-w-[65%] rounded-2xl p-4 relative ${
+                            msg.sender === 'user' 
+                              ? 'bg-blue-600 text-white rounded-br-none' 
+                              : 'bg-white border border-gray-200 shadow-sm rounded-bl-none'
+                          }`}
+                        >
+                          <div className="flex items-start">
+                            {msg.sender === 'bot' && (
+                              <div className="mr-2 mt-0.5">
+                                <div className="bg-blue-100 text-blue-600 p-1 rounded">
+                                  <FiZap size={14} />
+                                </div>
+                              </div>
+                            )}
+                            <div>
+                              <p className="whitespace-pre-wrap">{msg.text}</p>
+                              <div 
+                                className={`text-xs mt-1.5 ${
+                                  msg.sender === 'user' ? 'text-blue-200' : 'text-gray-500'
+                                }`}
+                              >
+                                {formatTime(msg.timestamp)}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Message triangle */}
+                          <div 
+                            className={`absolute bottom-0 ${
+                              msg.sender === 'user' 
+                                ? '-right-1.5 w-3 h-3 bg-blue-600' 
+                                : '-left-1.5 w-3 h-3 bg-white border-l border-b border-gray-200'
+                            }`}
+                            style={{ 
+                              clipPath: 'polygon(0% 0%, 100% 100%, 0% 100%)',
+                              transform: msg.sender === 'user' ? 'rotate(270deg)' : 'rotate(180deg)'
+                            }}
+                          />
+                        </div>
+                      </motion.div>
+                    ))}
+                    
+                    {/* Typing indicator */}
+                    <AnimatePresence>
+                      {isTyping && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0 }}
+                          className="flex justify-start"
+                        >
+                          <div className="bg-white border border-gray-200 shadow-sm rounded-2xl rounded-bl-none p-4">
+                            <div className="flex items-center">
+                              <div className="bg-blue-100 text-blue-600 p-1 rounded mr-2">
+                                <FiZap size={14} />
+                              </div>
+                              <motion.div
+                                variants={typingVariants}
+                                initial="hidden"
+                                animate="visible"
+                                className="flex space-x-1"
+                              >
+                                <motion.span 
+                                  variants={dotVariants}
+                                  className="w-2 h-2 bg-gray-400 rounded-full"
+                                />
+                                <motion.span 
+                                  variants={dotVariants}
+                                  className="w-2 h-2 bg-gray-400 rounded-full"
+                                />
+                                <motion.span 
+                                  variants={dotVariants}
+                                  className="w-2 h-2 bg-gray-400 rounded-full"
+                                />
+                              </motion.div>
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                    
+                    <div ref={messagesEndRef} />
+                  </div>
+                )}
+              </>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+      
+      {/* Input Area */}
+      <div className="bg-white border-t border-gray-200 p-4 md:p-6">
+        <div className="max-w-3xl mx-auto">
+          <div className="flex items-end bg-white rounded-xl border border-gray-300 focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-transparent">
+            <textarea
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              onKeyPress={handleKeyPress}
+              placeholder={`Message ${botName}...`}
+              className="flex-1 py-3 px-4 resize-none border-0 focus:ring-0 rounded-l-xl max-h-32"
+              rows={1}
+            />
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleSendMessage}
+              disabled={!message.trim()}
+              className={`m-2 p-2 rounded-lg ${
+                message.trim() 
+                  ? 'bg-blue-600 text-white' 
+                  : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              <FiSend size={20} />
+            </motion.button>
+          </div>
+          
+          <div className="mt-3 text-center">
+            <p className="text-xs text-gray-500">
+              Press ⏎ Enter to send • Press ⇧ Shift + ⏎ Enter for new line
+            </p>
           </div>
         </div>
-        
-        <div className="max-w-3xl mx-auto mt-2 text-center">
-          <p className="text-xs text-gray-500">
-            Press Enter to send • Shift+Enter for new line
-          </p>
-        </div>
-      </motion.div>
-    </div>
+      </div>
+    </motion.div>
   );
 };
 

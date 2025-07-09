@@ -1,504 +1,462 @@
 // frontend/src/pages/Settings.jsx
-import { AnimatePresence } from 'framer-motion';
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import axios from 'axios';
-import { FiSave, FiArrowLeft, FiImage, FiTrash2, FiCheck, FiX } from 'react-icons/fi';
+import { FiSave, FiUser, FiShield, FiDatabase, FiBell, FiMail, FiKey, FiGlobe, FiLock } from 'react-icons/fi';
+import { FaCheck, FaSpinner } from 'react-icons/fa';
 
 const Settings = () => {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const [botId, setBotId] = useState(null);
-  const [bot, setBot] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
-  const [showSuccess, setShowSuccess] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [activeTab, setActiveTab] = useState('profile');
   
-  // Form state
+  // Form states
   const [formData, setFormData] = useState({
-    name: '',
-    description: '',
-    avatar: '',
-    greetingMessage: '',
-    themeColor: '#6366f1',
+    name: 'Anointing Omowumi',
+    email: 'anointing@intellibotic.com',
+    timezone: 'GMT+1 (Lagos)',
+    notificationEmail: true,
+    notificationPush: true,
+    apiKey: 'sk_...aBcDeFgHiJkLmNoPqRsTuVwXyZ',
+    twoFactor: true,
+    dataRetention: 90,
+    language: 'en-US',
+    theme: 'light'
   });
 
-  // Extract botId from query params
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const id = params.get('botId');
-    if (id) {
-      setBotId(id);
-    }
-  }, [location]);
-
-  // Fetch bot data
-  useEffect(() => {
-    if (!botId) return;
-    
-    const fetchBot = async () => {
-      try {
-        setIsLoading(true);
-        const token = localStorage.getItem('token');
-        const response = await axios.get(`/api/bots/${botId}`, {
-          headers: { Authorization: `Bearer ${token}` }
-        });
-        
-        setBot(response.data);
-        setFormData({
-          name: response.data.name,
-          description: response.data.description || '',
-          avatar: response.data.config?.avatar || '',
-          greetingMessage: response.data.config?.greetingMessage || 'Hello! How can I help you today?',
-          themeColor: response.data.config?.themeColor || '#6366f1',
-        });
-      } catch (error) {
-        console.error('Error fetching bot:', error);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    fetchBot();
-  }, [botId]);
-
-  // Handle form changes
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  // Handle color change
-  const handleColorChange = (color) => {
-    setFormData(prev => ({ ...prev, themeColor: color }));
-  };
-
-  // Save settings
-  const handleSave = async () => {
-    if (!botId) return;
-    
+  const handleSave = () => {
     setIsSaving(true);
-    try {
-      const token = localStorage.getItem('token');
-      await axios.put(`/api/bots/${botId}`, {
-        name: formData.name,
-        description: formData.description,
-        config: {
-          ...(bot?.config || {}),
-          avatar: formData.avatar,
-          greetingMessage: formData.greetingMessage,
-          themeColor: formData.themeColor
-        }
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      // Show success feedback
-      setShowSuccess(true);
-      setTimeout(() => setShowSuccess(false), 3000);
-    } catch (error) {
-      console.error('Error saving bot settings:', error);
-    } finally {
+    // Simulate API call
+    setTimeout(() => {
       setIsSaving(false);
+      // Show success animation
+    }, 1500);
+  };
+
+  const handleInputChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: type === 'checkbox' ? checked : value
+    }));
+  };
+
+  const containerVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: {
+        duration: 0.5,
+        staggerChildren: 0.1
+      }
     }
   };
 
-  // Delete bot
-  const handleDelete = async () => {
-    if (!botId) return;
-    
-    try {
-      const token = localStorage.getItem('token');
-      await axios.delete(`/api/bots/${botId}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      navigate('/dashboard');
-    } catch (error) {
-      console.error('Error deleting bot:', error);
+  const itemVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: { opacity: 1, y: 0, transition: { duration: 0.4 } }
+  };
+
+  const cardVariants = {
+    hover: { 
+      y: -5, 
+      boxShadow: '0 20px 25px -5px rgba(59, 130, 246, 0.1), 0 10px 10px -5px rgba(59, 130, 246, 0.04)',
+      transition: { duration: 0.3 }
     }
   };
 
-  // Color options
-  const colorOptions = [
-    { name: 'Primary', value: '#6366f1' },
-    { name: 'Purple', value: '#8b5cf6' },
-    { name: 'Pink', value: '#ec4899' },
-    { name: 'Teal', value: '#14b8a6' },
-    { name: 'Amber', value: '#f59e0b' },
-    { name: 'Rose', value: '#f43f5e' },
+  const tabs = [
+    { id: 'profile', label: 'Profile', icon: <FiUser /> },
+    { id: 'security', label: 'Security', icon: <FiShield /> },
+    { id: 'notifications', label: 'Notifications', icon: <FiBell /> },
+    { id: 'api', label: 'API Keys', icon: <FiKey /> },
+    { id: 'data', label: 'Data & Storage', icon: <FiDatabase /> },
+    { id: 'preferences', label: 'Preferences', icon: <FiGlobe /> }
   ];
 
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="h-16 w-16 border-4 border-primary border-t-transparent rounded-full"
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="container mx-auto px-4 py-8">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between mb-6">
-          <motion.button
-            whileHover={{ x: -5 }}
-            whileTap={{ scale: 0.95 }}
-            onClick={() => navigate(-1)}
-            className="flex items-center text-gray-600 hover:text-gray-800"
-          >
-            <FiArrowLeft className="mr-2" />
-            Back
-          </motion.button>
-          
-          <h1 className="text-3xl font-bold text-gray-800 text-center">
-            Bot Settings
-          </h1>
-          
-          <div className="w-24"></div> {/* Spacer for alignment */}
-        </div>
-        
-        <div className="bg-white rounded-xl shadow-md p-6 flex items-start">
-          {formData.avatar ? (
-            <img 
-              src={formData.avatar} 
-              alt={formData.name} 
-              className="w-20 h-20 rounded-xl object-cover mr-6 border-2 border-gray-200"
-            />
-          ) : (
-            <div className="bg-gradient-to-r from-primary to-secondary w-20 h-20 rounded-xl flex items-center justify-center text-white text-2xl font-bold mr-6">
-              {formData.name.charAt(0)}
-            </div>
-          )}
-          
-          <div>
-            <h2 className="text-2xl font-bold text-gray-800">{formData.name}</h2>
-            <p className="text-gray-600">
-              {formData.description || "No description provided"}
-            </p>
-            <div className="mt-2 text-sm text-gray-500">
-              ID: {botId} • Created: {new Date(bot.created_at).toLocaleDateString()}
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Success Message */}
-      <AnimatePresence>
-        {showSuccess && (
-          <motion.div
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -20 }}
-            className="fixed top-6 right-6 z-50"
-          >
-            <div className="bg-green-500 text-white px-6 py-4 rounded-lg shadow-lg flex items-center">
-              <FiCheck className="mr-2 text-xl" />
-              Settings saved successfully!
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Delete Confirmation */}
-      <AnimatePresence>
-        {showDeleteConfirm && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4"
-          >
-            <motion.div
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="bg-white rounded-xl shadow-xl p-6 w-full max-w-md"
-            >
-              <h3 className="text-xl font-bold text-gray-800 mb-3">Delete Bot</h3>
-              <p className="text-gray-600 mb-6">
-                Are you sure you want to delete <span className="font-semibold">{formData.name}</span>? 
-                This action cannot be undone and all bot data will be permanently removed.
-              </p>
-              <div className="flex justify-end space-x-3">
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setShowDeleteConfirm(false)}
-                  className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700"
-                >
-                  Cancel
-                </motion.button>
-                <motion.button
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  onClick={handleDelete}
-                  className="px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white flex items-center"
-                >
-                  <FiTrash2 className="mr-2" />
-                  Delete Permanently
-                </motion.button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Settings Form */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Column */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="bg-white rounded-xl shadow-md p-6"
-        >
-          <h3 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
-            Basic Settings
-          </h3>
-          
-          <div className="space-y-6">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Bot Name
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                className="input-field"
-                placeholder="Enter bot name"
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Description
-              </label>
-              <textarea
-                name="description"
-                value={formData.description}
-                onChange={handleChange}
-                className="input-field"
-                placeholder="Describe your bot"
-                rows={3}
-              />
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Avatar URL
-              </label>
-              <div className="flex items-center">
-                <input
-                  type="text"
-                  name="avatar"
-                  value={formData.avatar}
-                  onChange={handleChange}
-                  className="input-field flex-grow"
-                  placeholder="https://example.com/avatar.jpg"
-                />
-                <div className="ml-3 w-10 h-10 rounded-lg bg-gray-100 flex items-center justify-center">
-                  <FiImage className="text-gray-500" />
-                </div>
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Greeting Message
-              </label>
-              <textarea
-                name="greetingMessage"
-                value={formData.greetingMessage}
-                onChange={handleChange}
-                className="input-field"
-                placeholder="Enter greeting message"
-                rows={3}
-              />
-            </div>
-          </div>
-        </motion.div>
-        
-        {/* Right Column */}
-        <div className="space-y-8">
-          {/* Theme Color */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.1 }}
-            className="bg-white rounded-xl shadow-md p-6"
-          >
-            <h3 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
-              Theme & Appearance
-            </h3>
-            
-            <div className="mb-6">
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Primary Color
-              </label>
-              <div className="flex items-center">
-                <div className="relative w-12 h-12 rounded-lg overflow-hidden mr-4">
-                  <input
-                    type="color"
-                    value={formData.themeColor}
-                    onChange={(e) => handleColorChange(e.target.value)}
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                  />
-                  <div 
-                    className="w-full h-full" 
-                    style={{ backgroundColor: formData.themeColor }}
-                  />
-                </div>
-                <input
-                  type="text"
-                  value={formData.themeColor}
-                  onChange={(e) => handleColorChange(e.target.value)}
-                  className="input-field w-32"
-                />
-              </div>
-            </div>
-            
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-3">
-                Color Presets
-              </label>
-              <div className="grid grid-cols-3 gap-3">
-                {colorOptions.map((color) => (
-                  <motion.div
-                    key={color.value}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => handleColorChange(color.value)}
-                    className={`h-10 rounded-lg cursor-pointer flex items-center justify-center ${
-                      formData.themeColor === color.value 
-                        ? 'ring-2 ring-offset-2 ring-gray-800' 
-                        : ''
-                    }`}
-                    style={{ backgroundColor: color.value }}
-                  >
-                    {formData.themeColor === color.value && (
-                      <FiCheck className="text-white" />
-                    )}
-                  </motion.div>
-                ))}
-              </div>
-            </div>
-          </motion.div>
-          
-          {/* Preview */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.2 }}
-            className="bg-white rounded-xl shadow-md p-6"
-          >
-            <h3 className="text-xl font-bold text-gray-800 mb-6 pb-2 border-b border-gray-200">
-              Chat Preview
-            </h3>
-            
-            <div className="space-y-4">
-              <div className="flex justify-end">
-                <div 
-                  className="max-w-[80%] rounded-2xl px-4 py-3 shadow-sm"
-                  style={{ 
-                    backgroundColor: formData.themeColor,
-                    color: 'white',
-                    borderBottomRightRadius: '4px'
-                  }}
-                >
-                  <p>{formData.greetingMessage || 'Hello! How can I help you today?'}</p>
-                  <div className="text-xs mt-1 opacity-70">
-                    10:00 AM
-                  </div>
-                </div>
-              </div>
-              
-              <div className="flex">
-                <div className="mr-3">
-                  <div className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center">
-                    <span className="font-medium text-gray-700">U</span>
-                  </div>
-                </div>
-                <div className="max-w-[80%]">
-                  <div className="rounded-2xl px-4 py-3 shadow-sm bg-white border border-gray-200 rounded-tl-none">
-                    <p>Can you help me with something?</p>
-                    <div className="text-xs mt-1 text-gray-500">
-                      10:01 AM
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </motion.div>
-          
-          {/* Danger Zone */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: 0.3 }}
-            className="bg-red-50 border border-red-200 rounded-xl p-6"
-          >
-            <h3 className="text-xl font-bold text-red-800 mb-4">
-              Danger Zone
-            </h3>
-            
-            <div className="flex flex-col md:flex-row md:items-center justify-between">
-              <div>
-                <h4 className="font-medium text-red-700">Delete this bot</h4>
-                <p className="text-red-600 text-sm mt-1">
-                  Once deleted, this bot cannot be recovered. All data will be permanently removed.
-                </p>
-              </div>
-              
-              <motion.button
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setShowDeleteConfirm(true)}
-                className="mt-4 md:mt-0 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg flex items-center"
-              >
-                <FiTrash2 className="mr-2" />
-                Delete Bot
-              </motion.button>
-            </div>
-          </motion.div>
-        </div>
-      </div>
-
-      {/* Save Button */}
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-4 md:p-8">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3, delay: 0.4 }}
-        className="fixed bottom-6 right-6"
+        transition={{ duration: 0.5 }}
+        className="max-w-6xl mx-auto"
       >
-        <motion.button
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={handleSave}
-          disabled={isSaving}
-          className="btn-primary flex items-center shadow-lg"
-        >
-          {isSaving ? (
-            <motion.span
-              animate={{ rotate: 360 }}
-              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-              className="h-5 w-5 border-2 border-white border-t-transparent rounded-full"
-            />
-          ) : (
-            <>
-              <FiSave className="mr-2" />
-              Save Settings
-            </>
-          )}
-        </motion.button>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+          <div>
+            <motion.h1 
+              className="text-3xl md:text-4xl font-bold text-gray-800"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.1 }}
+            >
+              Account Settings
+            </motion.h1>
+            <motion.p 
+              className="text-gray-600 mt-2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ delay: 0.2 }}
+            >
+              Manage your account preferences and security settings
+            </motion.p>
+          </div>
+          
+          <motion.button
+            whileHover={{ scale: 1.03 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={handleSave}
+            disabled={isSaving}
+            className={`mt-4 md:mt-0 flex items-center px-6 py-3 rounded-lg font-medium transition-all ${
+              isSaving 
+                ? 'bg-blue-400 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-700 shadow-lg hover:shadow-xl'
+            } text-white`}
+          >
+            {isSaving ? (
+              <>
+                <FaSpinner className="animate-spin mr-2" />
+                Saving...
+              </>
+            ) : (
+              <>
+                <FiSave className="mr-2" />
+                Save Changes
+              </>
+            )}
+          </motion.button>
+        </div>
+
+        <div className="flex flex-col md:flex-row gap-6">
+          {/* Tab Navigation */}
+          <motion.div 
+            className="w-full md:w-64"
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.3 }}
+          >
+            <div className="bg-white rounded-xl shadow-sm p-2">
+              {tabs.map((tab) => (
+                <motion.button
+                  key={tab.id}
+                  whileHover={{ backgroundColor: '#f3f4f6' }}
+                  whileTap={{ scale: 0.98 }}
+                  className={`flex items-center w-full p-3 rounded-lg text-left transition-colors ${
+                    activeTab === tab.id 
+                      ? 'text-blue-600 bg-blue-50 font-medium' 
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                  onClick={() => setActiveTab(tab.id)}
+                >
+                  <span className="mr-3">{tab.icon}</span>
+                  {tab.label}
+                </motion.button>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Main Content */}
+          <motion.div 
+            className="flex-1"
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+          >
+            {activeTab === 'profile' && (
+              <motion.div 
+                className="bg-white rounded-xl shadow-sm overflow-hidden"
+                variants={containerVariants}
+              >
+                <div className="border-b border-gray-200 p-6">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                    <FiUser className="mr-2 text-blue-600" />
+                    Profile Information
+                  </h2>
+                  <p className="text-gray-600 mt-1">Update your personal details</p>
+                </div>
+                
+                <div className="p-6">
+                  <motion.div variants={itemVariants} className="mb-6">
+                    <label className="block text-gray-700 mb-2">Full Name</label>
+                    <input
+                      type="text"
+                      name="name"
+                      value={formData.name}
+                      onChange={handleInputChange}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    />
+                  </motion.div>
+                  
+                  <motion.div variants={itemVariants} className="mb-6">
+                    <label className="block text-gray-700 mb-2">Email Address</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                    />
+                  </motion.div>
+                  
+                  <motion.div variants={itemVariants}>
+                    <label className="block text-gray-700 mb-2">Timezone</label>
+                    <select
+                      name="timezone"
+                      value={formData.timezone}
+                      onChange={handleInputChange}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all appearance-none"
+                    >
+                      <option>GMT+1 (Lagos)</option>
+                      <option>GMT (London)</option>
+                      <option>GMT-5 (New York)</option>
+                      <option>GMT+8 (Singapore)</option>
+                    </select>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+            
+            {activeTab === 'security' && (
+              <motion.div 
+                className="bg-white rounded-xl shadow-sm overflow-hidden"
+                variants={containerVariants}
+              >
+                <div className="border-b border-gray-200 p-6">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                    <FiShield className="mr-2 text-blue-600" />
+                    Security Settings
+                  </h2>
+                  <p className="text-gray-600 mt-1">Manage your account security</p>
+                </div>
+                
+                <div className="p-6">
+                  <motion.div 
+                    variants={itemVariants} 
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-4"
+                  >
+                    <div>
+                      <h3 className="font-medium text-gray-800">Two-Factor Authentication</h3>
+                      <p className="text-gray-600 text-sm mt-1">Add an extra layer of security to your account</p>
+                    </div>
+                    <div className="relative inline-block w-12 h-6">
+                      <input
+                        type="checkbox"
+                        name="twoFactor"
+                        checked={formData.twoFactor}
+                        onChange={handleInputChange}
+                        className="opacity-0 w-0 h-0"
+                        id="twoFactorToggle"
+                      />
+                      <label 
+                        htmlFor="twoFactorToggle"
+                        className={`absolute cursor-pointer top-0 left-0 right-0 bottom-0 rounded-full transition-colors ${
+                          formData.twoFactor ? 'bg-blue-600' : 'bg-gray-300'
+                        }`}
+                      >
+                        <span 
+                          className={`absolute h-5 w-5 bg-white rounded-full transition-transform ${
+                            formData.twoFactor ? 'transform translate-x-6' : 'translate-x-1'
+                          } top-0.5`}
+                        />
+                      </label>
+                    </div>
+                  </motion.div>
+                  
+                  <motion.div 
+                    variants={itemVariants} 
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg mb-4"
+                  >
+                    <div>
+                      <h3 className="font-medium text-gray-800">Password</h3>
+                      <p className="text-gray-600 text-sm mt-1">Last changed 3 months ago</p>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-blue-600 font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      Change Password
+                    </motion.button>
+                  </motion.div>
+                  
+                  <motion.div 
+                    variants={itemVariants} 
+                    className="flex items-center justify-between p-4 bg-gray-50 rounded-lg"
+                  >
+                    <div>
+                      <h3 className="font-medium text-gray-800">Active Sessions</h3>
+                      <p className="text-gray-600 text-sm mt-1">2 active sessions</p>
+                    </div>
+                    <motion.button
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      className="px-4 py-2 border border-gray-300 rounded-lg text-blue-600 font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      View Sessions
+                    </motion.button>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+            
+            {activeTab === 'api' && (
+              <motion.div 
+                className="bg-white rounded-xl shadow-sm overflow-hidden"
+                variants={containerVariants}
+              >
+                <div className="border-b border-gray-200 p-6">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                    <FiKey className="mr-2 text-blue-600" />
+                    API Keys
+                  </h2>
+                  <p className="text-gray-600 mt-1">Manage your API access keys</p>
+                </div>
+                
+                <div className="p-6">
+                  <motion.div 
+                    variants={itemVariants} 
+                    className="p-4 bg-blue-50 border border-blue-200 rounded-lg mb-6"
+                  >
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <h3 className="font-medium text-gray-800">Primary API Key</h3>
+                        <p className="text-gray-600 text-sm mt-1">Created on Jan 12, 2024</p>
+                      </div>
+                      <div className="flex gap-2">
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="px-3 py-1 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors"
+                        >
+                          Regenerate
+                        </motion.button>
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="px-3 py-1 border border-gray-300 rounded-lg text-red-600 font-medium hover:bg-red-50 transition-colors"
+                        >
+                          Revoke
+                        </motion.button>
+                      </div>
+                    </div>
+                    <div className="mt-4 flex items-center">
+                      <div className="flex-1 p-3 bg-white border border-gray-300 rounded-lg font-mono text-sm overflow-x-auto">
+                        {formData.apiKey}
+                      </div>
+                      <motion.button
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        className="ml-2 px-4 py-3 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                      >
+                        Copy
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                  
+                  <motion.div variants={itemVariants}>
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="flex items-center px-4 py-3 bg-white border border-gray-300 rounded-lg text-blue-600 font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      <FiKey className="mr-2" />
+                      Create New API Key
+                    </motion.button>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+            
+            {activeTab === 'data' && (
+              <motion.div 
+                className="bg-white rounded-xl shadow-sm overflow-hidden"
+                variants={containerVariants}
+              >
+                <div className="border-b border-gray-200 p-6">
+                  <h2 className="text-xl font-bold text-gray-800 flex items-center">
+                    <FiDatabase className="mr-2 text-blue-600" />
+                    Data & Storage
+                  </h2>
+                  <p className="text-gray-600 mt-1">Manage your data retention policies</p>
+                </div>
+                
+                <div className="p-6">
+                  <motion.div variants={itemVariants} className="mb-6">
+                    <label className="block text-gray-700 mb-2">Conversation Data Retention</label>
+                    <div className="flex items-center gap-4">
+                      <input
+                        type="range"
+                        name="dataRetention"
+                        min="7"
+                        max="365"
+                        value={formData.dataRetention}
+                        onChange={handleInputChange}
+                        className="flex-1"
+                      />
+                      <div className="w-20 px-3 py-2 border border-gray-300 rounded-lg text-center">
+                        {formData.dataRetention} days
+                      </div>
+                    </div>
+                    <p className="text-gray-600 text-sm mt-2">
+                      Chat conversation data will be automatically deleted after this period
+                    </p>
+                  </motion.div>
+                  
+                  <motion.div variants={itemVariants} className="mb-6">
+                    <h3 className="font-medium text-gray-800 mb-3">Data Export</h3>
+                    <p className="text-gray-600 mb-4">
+                      Export all your chatbot data and configurations for backup or migration
+                    </p>
+                    <motion.button
+                      whileHover={{ scale: 1.03 }}
+                      whileTap={{ scale: 0.98 }}
+                      className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-blue-600 font-medium hover:bg-gray-50 transition-colors"
+                    >
+                      Export Data
+                    </motion.button>
+                  </motion.div>
+                  
+                  <motion.div variants={itemVariants} className="p-4 bg-red-50 border border-red-200 rounded-lg">
+                    <h3 className="font-medium text-red-800 flex items-center">
+                      <FiLock className="mr-2" />
+                      Danger Zone
+                    </h3>
+                    <p className="text-red-700 text-sm mt-1 mb-3">
+                      These actions are irreversible. Proceed with caution.
+                    </p>
+                    <div className="flex gap-2">
+                      <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="px-4 py-2 bg-white border border-red-300 rounded-lg text-red-600 font-medium hover:bg-red-50 transition-colors"
+                      >
+                        Delete Account
+                      </motion.button>
+                      <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="px-4 py-2 bg-white border border-red-300 rounded-lg text-red-600 font-medium hover:bg-red-50 transition-colors"
+                      >
+                        Delete All Data
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                </div>
+              </motion.div>
+            )}
+          </motion.div>
+        </div>
+        
+        {/* Success Notification */}
+        {!isSaving && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="fixed bottom-6 right-6 bg-green-500 text-white px-4 py-3 rounded-lg shadow-lg flex items-center"
+          >
+            <FaCheck className="mr-2" />
+            Settings saved successfully!
+          </motion.div>
+        )}
       </motion.div>
     </div>
   );
