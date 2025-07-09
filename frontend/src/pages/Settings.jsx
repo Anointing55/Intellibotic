@@ -1,4 +1,5 @@
 // frontend/src/pages/Settings.jsx
+import { AnimatePresence } from 'framer-motion';
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';

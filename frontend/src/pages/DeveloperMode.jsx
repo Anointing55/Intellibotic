@@ -1,4 +1,5 @@
 // frontend/src/pages/DeveloperMode.jsx
+import { FiPlus } from 'react-icons/fi';
 import React, { useState, useRef } from 'react';
 import { motion } from 'framer-motion';
 import Editor from '@monaco-editor/react';

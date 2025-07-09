@@ -3,6 +3,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FiChevronLeft, FiChevronRight, FiX, FiCheck, FiMessageSquare, FiGitBranch, FiCode, FiBox, FiSettings, FiPlus, FiPlay } from 'react-icons/fi';
 
+const message = "Put your message here";  // or whatever is appropriate for your code
 const Instructions = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [completed, setCompleted] = useState(false);
