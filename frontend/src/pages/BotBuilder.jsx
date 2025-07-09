@@ -2,9 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import axios from 'axios';
-import {
-  ReactFlowProvider,
-  ReactFlow,
+
+import ReactFlow, {
   addEdge,
   useNodesState,
   useEdgesState,
@@ -12,10 +11,24 @@ import {
   Background,
   MiniMap,
   Panel
-} from '@reactflow/core';
-import '@reactflow/core/dist/style.css';
+} from 'reactflow';
+import { ReactFlowProvider } from 'reactflow';
+
+import 'reactflow/dist/style.css';
 import '@reactflow/node-resizer/dist/style.css';
-import { FiSave, FiMessageSquare, FiCode, FiGitBranch, FiChevronRight, FiX, FiPlus, FiTrash2, FiSettings, FiPlay } from 'react-icons/fi';
+
+import {
+  FiSave,
+  FiMessageSquare,
+  FiCode,
+  FiGitBranch,
+  FiChevronRight,
+  FiX,
+  FiPlus,
+  FiTrash2,
+  FiSettings,
+  FiPlay
+} from 'react-icons/fi';
 
 // Custom Node Types
 const MessageNode = ({ data }) => (
