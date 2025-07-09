@@ -1,0 +1,27 @@
+# Node.js
+node_modules/
+.env
+.DS_Store
+dist/
+build/
+.cache/
+*.log
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.env
+.venv
+
+# React
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+
+# VSCode
+.vscode/
+
+# OS
+Thumbs.db
